@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="10dp">
+
+    <TextView
+        android:id="@+id/tvFtpClientName"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight=".40"
+        android:text="TextView" />
+
+    <Button
+        android:id="@+id/btnFtpClientEdit"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".15"
+        android:drawableStart="@android:drawable/ic_menu_edit"
+        android:drawableLeft="@android:drawable/ic_menu_edit" />
+
+    <Button
+        android:id="@+id/btnFtpClientChooseFolders"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".15"
+        android:drawableStart="@mipmap/icons8_folder_50"
+        android:drawableLeft="@mipmap/icons8_folder_50" />
+
+    <Button
+        android:id="@+id/btnStartSync"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0"
+        android:drawableStart="@android:drawable/ic_popup_sync"
+        android:drawableLeft="@android:drawable/ic_popup_sync"
+        android:visibility="invisible" />
+
+    <Button
+        android:id="@+id/btnFtpClientSync"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0"
+        android:drawableStart="@android:drawable/ic_popup_sync"
+        android:drawableLeft="@android:drawable/ic_popup_sync"
+        android:visibility="invisible" />
+
+    <Button
+        android:id="@+id/btnFtpClientDelete"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".15"
+        android:drawableStart="@android:drawable/ic_delete"
+        android:drawableLeft="@android:drawable/ic_delete" />
+</LinearLayout>

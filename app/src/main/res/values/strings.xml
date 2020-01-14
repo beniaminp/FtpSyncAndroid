@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">FTP SYNC</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_add_ftp_conenctino">Add FTP Connection</string>
+    <string name="add_ftp_client">Add FTP Client</string>
+    <string name="ftp_host">FTP Host</string>
+    <string name="ftp_user">FTP User</string>
+    <string name="ftp_password">FTP Password</string>
+    <string name="hostTemplate">192.168.100.10</string>
+    <string name="userTemplate">myuser</string>
+    <string name="passwordTemplate">myPass</string>
+    <string name="save">Save</string>
+    <string name="test">Test</string>
+    <string name="title_activity_ftp_connections">FtpConnections</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+    <string name="connSuccess">Connection success...</string>
+    <string name="connError">Could not conenct to server...</string>
+    <string name="error">Error</string>
+    <string name="info">Info</string>
+    <string name="title_activity_ftp_explorer">FTP Explorer</string>
+    <string name="title_activity_link_folders">LinkFolders</string>
+    <string name="title_activity_choose_local_folder">ChooseLocalFolder</string>
+</resources>
