@@ -27,6 +27,9 @@ import java.io.FileInputStream
 class SyncDataService : Service() {
     lateinit var notificationManger: NotificationManager
     private val NOTIFICATION_ID = 101
+    private val TIMES_TO_RETRY = 10
+    private val TIME_TO_WAIT = 60
+    private var NO_OF_RETRIES = 0
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return START_STICKY
@@ -137,7 +140,12 @@ class SyncDataService : Service() {
 
             override fun onPostExecute(result: Void?) {
                 super.onPostExecute(result)
+                if (NO_OF_RETRIES == TIMES_TO_RETRY) {
+                    Thread.sleep(TIME_TO_WAIT * 60000L)
+                    NO_OF_RETRIES = 0
+                }
                 Thread.sleep(10000)
+                NO_OF_RETRIES = NO_OF_RETRIES++
                 startSyncFolders().execute()
             }
         }
