@@ -68,8 +68,6 @@
         <TableRow
             android:layout_width="match_parent"
             android:layout_height="match_parent">
-
-
             <TextView
                 android:id="@+id/tvFtpPassword"
                 android:text="@string/ftp_password"
@@ -82,6 +80,22 @@
                 android:ems="10"
                 android:inputType="textPassword"
                 android:text="@string/passwordTemplate" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            <TextView
+                android:id="@+id/tvRootFileLocation"
+                android:text="@string/ftp_root_location"
+                android:textAppearance="@style/TextAppearance.AppCompat.Small" />
+
+            <EditText
+                android:id="@+id/txtRootFileLocation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:inputType="text" />
         </TableRow>
 
         <TableRow

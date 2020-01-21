@@ -14,11 +14,16 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <activity
+            android:name=".activities.sync_data_view.ViewSyncDataActivity"
+            android:label="@string/title_activity_view_sync_data"
+            android:theme="@style/AppTheme.NoActionBar"></activity>
+
         <service
             android:name=".services.SyncDataService"
             android:enabled="true"
             android:exported="true"
-            android:launchMode="singleTop"></service>
+            android:launchMode="singleTop" />
 
         <activity
             android:name=".activities.ChooseLocalFolder"

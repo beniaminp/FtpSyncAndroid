@@ -31,12 +31,14 @@ class AddFtpConnectionActivity : AppCompatActivity() {
             txtFtpHost.setText(ftpClient.server)
             txtFtpUser.setText(ftpClient.user)
             txtFtpPassword.setText(ftpClient.password)
+            txtRootFileLocation.setText(ftpClient.rootLocation)
+            txtRootFileLocation.isEnabled = false
         }
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         btnSaveFtp.setOnClickListener {
-            var ftpClient = FtpClient(fptClientId, txtFtpHost.text.toString().trim(), txtFtpUser.text.toString().trim(), txtFtpPassword.text.toString().trim())
+            var ftpClient = FtpClient(fptClientId, txtFtpHost.text.toString().trim(), txtFtpUser.text.toString().trim(), txtFtpPassword.text.toString().trim(), txtRootFileLocation.text.toString().trim())
             saveFtpClient(ftpClient)
         }
 

@@ -1,19 +1,26 @@
 package com.padana.ftpsync.activities.ftp_connections
 
 import android.content.Intent
+import android.net.Uri
+import android.os.AsyncTask
+import android.os.Build
 import android.os.Bundle
+import android.provider.DocumentsContract
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import com.padana.ftpsync.R
-import com.padana.ftpsync.activities.ChooseLocalFolder
 import com.padana.ftpsync.activities.ftp_explorer.FtpExplorerActivity
 import com.padana.ftpsync.activities.local_explorer.LocalExplorerActivity
+import com.padana.ftpsync.activities.sync_data_view.ViewSyncDataActivity
 import com.padana.ftpsync.adapters.FtpConnectionsListAdapter
 import com.padana.ftpsync.dao.GenericDAO
 import com.padana.ftpsync.database.DatabaseClient
 import com.padana.ftpsync.entities.FtpClient
+import com.padana.ftpsync.entities.SyncData
 import com.padana.ftpsync.interfaces.BtnClickListener
 import com.padana.ftpsync.services.SyncDataService
 import com.padana.ftpsync.shared.PadanaAsyncTask
+import com.padana.ftpsync.utils.FileHelpers
 import kotlinx.android.synthetic.main.activity_ftp_connections.*
 import kotlinx.android.synthetic.main.content_ftp_connections.*
 import kotlinx.android.synthetic.main.progress_dialog.*
@@ -21,6 +28,7 @@ import kotlinx.android.synthetic.main.progress_dialog.*
 
 class FtpConnectionsActivity : AppCompatActivity() {
     lateinit var genericDAO: GenericDAO
+    var selectedFtpClient: FtpClient? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,6 +49,19 @@ class FtpConnectionsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         populateFtpClientList()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if(requestCode == 9999){
+            val uri: Uri = data!!.data!!
+            val docUri: Uri = DocumentsContract.buildDocumentUriUsingTree(uri,
+                    DocumentsContract.getTreeDocumentId(uri))
+            val path: String? = FileHelpers.getPath(this, docUri)
+
+            insertFolderSyncData(path!!, selectedFtpClient!!)
+            selectedFtpClient = null
+        }
     }
 
     private fun addFtpConnection() {
@@ -103,6 +124,11 @@ class FtpConnectionsActivity : AppCompatActivity() {
                     override fun onBtnClick(position: Int) {
                         chooseFolderSync(ftpClientList[position])
                     }
+                },
+                object : BtnClickListener {
+                    override fun onBtnClick(position: Int) {
+                        goToSyncDataView(ftpClientList[position])
+                    }
                 }
         )
     }
@@ -119,10 +145,20 @@ class FtpConnectionsActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    private fun chooseFolderSync(ftpClient: FtpClient) {
-        val intent = Intent(this, ChooseLocalFolder::class.java)
-        intent.putExtra("ftpClient", ftpClient)
+    private fun goToSyncDataView(ftpClient: FtpClient) {
+        val intent = Intent(this, ViewSyncDataActivity::class.java)
+        intent.putExtra("ftpClientId", ftpClient.id!!)
         startActivity(intent)
+    }
+
+    private fun chooseFolderSync(ftpClient: FtpClient) {
+       /* val intent = Intent(this, ChooseLocalFolder::class.java)
+        intent.putExtra("ftpClient", ftpClient)
+        startActivity(intent)*/
+        selectedFtpClient = ftpClient
+        val i = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+        i.addCategory(Intent.CATEGORY_DEFAULT)
+        startActivityForResult(Intent.createChooser(i, "Choose directory"), 9999)
     }
 
     private fun deleteFtpClient(ftpClient: FtpClient) {
@@ -153,6 +189,20 @@ class FtpConnectionsActivity : AppCompatActivity() {
 
     private fun startSyncData(ftpClient: FtpClient) {
 
+    }
+
+    private fun insertFolderSyncData(folderPath: String, ftpClient: FtpClient) {
+        object : AsyncTask<Void, Void, Void>() {
+            override fun doInBackground(vararg voids: Void): Void? {
+                var syncData = SyncData(null, ftpClient!!.id, folderPath, ftpClient.rootLocation+"/"+Build.MODEL + folderPath)
+                DatabaseClient(applicationContext).getAppDatabase().genericDAO.insertSyncData(syncData)
+                return null
+            }
+        }.execute()
+    }
+
+    override fun onBackPressed() {
+        moveTaskToBack(true)
     }
 
 }

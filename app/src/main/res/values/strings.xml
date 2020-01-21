@@ -21,4 +21,6 @@
     <string name="title_activity_ftp_explorer">FTP Explorer</string>
     <string name="title_activity_link_folders">LinkFolders</string>
     <string name="title_activity_choose_local_folder">ChooseLocalFolder</string>
+    <string name="title_activity_view_sync_data">ViewSyncData</string>
+    <string name="ftp_root_location">Root Location</string>
 </resources>

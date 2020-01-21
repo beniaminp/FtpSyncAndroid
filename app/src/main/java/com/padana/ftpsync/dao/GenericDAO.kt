@@ -36,6 +36,9 @@ interface GenericDAO {
     @Query("DELETE FROM sync_data where serverId=:ftpClientId")
     fun deleteSyncDataByFtpClientId(ftpClientId: Int)
 
+    @Query("SELECT * FROM sync_data WHERE serverId=:serverId")
+    fun findSyncDataByFtpClientId(serverId: Int): Array<SyncData>
+
     /* @Query("SELECT * FROM user WHERE age > :minAge")
      fun loadAllUsersOlderThan(minAge: Int): Array<User>*/
 }

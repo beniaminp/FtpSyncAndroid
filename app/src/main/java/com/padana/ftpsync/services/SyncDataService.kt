@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.os.AsyncTask
 import android.os.Build
 import android.os.IBinder
+import android.os.Process
 import android.os.SystemClock
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
@@ -14,7 +15,9 @@ import androidx.core.app.NotificationCompat.PRIORITY_MAX
 import com.padana.ftpsync.R
 import com.padana.ftpsync.activities.ftp_connections.FtpConnectionsActivity
 import com.padana.ftpsync.database.DatabaseClient
+import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.entities.SyncData
+import com.padana.ftpsync.utils.FTPUtils
 import org.apache.commons.net.ftp.FTPClient
 import org.apache.commons.net.ftp.FTPClientConfig
 import org.apache.commons.net.ftp.FTPFile
@@ -22,6 +25,7 @@ import org.apache.commons.net.ftp.FTPReply
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
+import java.lang.RuntimeException
 
 
 class SyncDataService : Service() {
@@ -30,6 +34,8 @@ class SyncDataService : Service() {
     private val TIMES_TO_RETRY = 10
     private val TIME_TO_WAIT = 60
     private var NO_OF_RETRIES = 0
+    lateinit var ftpClientsList: Array<FtpClient>
+    private var ftpClientConnectionsMap: MutableMap<Int, FTPClient> =  mutableMapOf()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return START_STICKY
@@ -38,7 +44,16 @@ class SyncDataService : Service() {
     override fun onCreate() {
         super.onCreate()
         startForeground()
-        startSyncFolders().execute()
+        ftpClientsList = loadAllFtpClients()!!
+        ftpClientsList.forEach { ftpClient ->
+            ftpClientConnectionsMap[ftpClient.id!!] = createFtpConnection(ftpClient)!!
+        }
+        Thread(Runnable {
+            run {
+                Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
+                doSync()
+            }
+        }).start()
     }
 
     override fun onBind(intent: Intent): IBinder {
@@ -62,7 +77,6 @@ class SyncDataService : Service() {
 
     }
 
-
     private fun startForeground() {
         notificationManger = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -83,72 +97,131 @@ class SyncDataService : Service() {
         return channelId
     }
 
-    private fun startSyncFolders(): AsyncTask<Void, Int, Void> {
-        return object : AsyncTask<Void, Int, Void>() {
-            @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
-            override fun doInBackground(vararg voids: Void): Void? {
-                var syncDataList = DatabaseClient(applicationContext).getAppDatabase().genericDAO.loadAllSyncData()
-                var ftpClientsList = DatabaseClient(applicationContext).getAppDatabase().genericDAO.loadAllFtpClients()
-                ftpClientsList.forEach { ftpClient ->
-                    val syncDataForClient: List<SyncData> = getSyncDataForClient(ftpClient.id!!, syncDataList)
+    private fun doSync() {
+        var syncDataList = loadAllSyncData()!!
+        ftpClientsList.forEach { ftpClient ->
+            val syncDataForClient: List<SyncData> = getSyncDataForClient(ftpClient.id!!, syncDataList)
 
-                    var ftp = FTPClient()
-                    var config = FTPClientConfig()
-                    ftp.defaultTimeout = 5000
-                    ftp.configure(config)
-                    try {
-                        ftp.connect(ftpClient!!.server)
+            try {
+                var ftp =ftpClientConnectionsMap[ftpClient.id!!]!!
 
-                        var reply = ftp.replyCode
+                syncDataForClient.forEach { syncData ->
+                    var directoryExists = checkDirectoryExists(ftp, syncData)
+                    if (!directoryExists) {
+                        FTPUtils.makeDirectories(ftp, syncData.serverPath!!)
+                    }
+                    var remoteFiles: Array<FTPFile> = listRemoteFiles(ftp, syncData)
+                    if(syncData.localPath == null){
+                        throw RuntimeException("Path is null!")
+                    }
+                    var localFiles: Array<File> = File(syncData.localPath).listFiles()
+                    if (remoteFiles.size != localFiles.size) {
+                        localFiles.forEach { localFile ->
+                            if (!remoteFileExists(localFile, remoteFiles)) {
+                                if (!localFile.isDirectory) {
+                                    storeFileOnRemote(localFile, ftp, syncData)
+                                }else{
 
-                        if (!FTPReply.isPositiveCompletion(reply)) {
-                            ftp.disconnect()
-                            return null
-                        }
-                        ftp.autodetectUTF8 = true
-                        ftp.controlEncoding = "UTF-8"
-
-                        ftp.login(ftpClient.user, ftpClient.password)
-                        syncDataForClient.forEach { syncData ->
-                            var directoryExists = ftp.changeWorkingDirectory(syncData.serverPath)
-                            if (!directoryExists) {
-                                ftp.makeDirectory(syncData.serverPath)
-                            }
-                            var remoteFiles: Array<FTPFile> = ftp.listFiles(syncData.serverPath)
-                            var localFiles: Array<File> = File(syncData.localPath).listFiles()
-                            if (remoteFiles.size != localFiles.size) {
-                                localFiles.forEach { localFile ->
-                                    if (!remoteFileExists(localFile, remoteFiles)) {
-                                        if (!localFile.isDirectory) {
-                                            val bis = BufferedInputStream(FileInputStream(localFile))
-                                            ftp.storeFile(syncData.serverPath + "/" + localFile.name, bis)
-                                            bis.close()
-                                        }
-                                    }
                                 }
                             }
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        startForeground(NOTIFICATION_ID, getNotification("ERROR", e.message.toString()))
-                        System.err.println("Could not connect to server...")
                     }
-
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                startForeground(NOTIFICATION_ID, getNotification("ERROR", e.message.toString()))
+                System.err.println("Could not connect to server...")
+            }
+
+            if (NO_OF_RETRIES == TIMES_TO_RETRY) {
+                Thread.sleep(TIME_TO_WAIT * 60000L)
+                NO_OF_RETRIES = 0
+            }
+            Thread.sleep(10000)
+            NO_OF_RETRIES = NO_OF_RETRIES++
+            this.doSync()
+        }
+    }
+
+    private fun listRemoteFiles(ftp: FTPClient, syncData: SyncData): Array<FTPFile> =
+            object : AsyncTask<Void, Void, Array<FTPFile>>() {
+                override fun doInBackground(vararg voids: Void): Array<FTPFile> {
+                    return ftp.listFiles(syncData.serverPath)
+                }
+            }.execute().get()
+
+    private fun makeDirectory(ftp: FTPClient, syncData: SyncData): Boolean {
+        return object : AsyncTask<Void, Void, Boolean>() {
+            override fun doInBackground(vararg voids: Void): Boolean {
+                return ftp.makeDirectory(syncData.serverPath)
+            }
+        }.execute().get()
+    }
+
+    private fun storeFileOnRemote(localFile: File, ftp: FTPClient, syncData: SyncData): Void? {
+        return object : AsyncTask<Void, Void, Void>() {
+            override fun doInBackground(vararg voids: Void?): Void? {
+                val bis = BufferedInputStream(FileInputStream(localFile))
+                ftp.storeFile( syncData.serverPath + "/" + localFile.name, bis)
+                bis.close()
                 return null
             }
+        }.execute().get()
+    }
 
-            override fun onPostExecute(result: Void?) {
-                super.onPostExecute(result)
-                if (NO_OF_RETRIES == TIMES_TO_RETRY) {
-                    Thread.sleep(TIME_TO_WAIT * 60000L)
-                    NO_OF_RETRIES = 0
-                }
-                Thread.sleep(10000)
-                NO_OF_RETRIES = NO_OF_RETRIES++
-                startSyncFolders().execute()
+    private fun checkDirectoryExists(ftp: FTPClient, syncData: SyncData): Boolean {
+        return object : AsyncTask<Void, Void, Boolean>() {
+            override fun doInBackground(vararg voids: Void): Boolean {
+                return ftp.changeWorkingDirectory(syncData.serverPath)
             }
-        }
+        }.execute().get()
+    }
+
+    private fun loadAllSyncData(): Array<SyncData>? {
+        return object : AsyncTask<Void, Void, Array<SyncData>>() {
+            override fun doInBackground(vararg voids: Void): Array<SyncData> {
+                return DatabaseClient(applicationContext).getAppDatabase().genericDAO.loadAllSyncData()
+            }
+        }.execute().get()
+    }
+
+    private fun loadAllFtpClients(): Array<FtpClient>? {
+        return object : AsyncTask<Void, Void,Array<FtpClient>>() {
+            override fun doInBackground(vararg voids: Void):Array<FtpClient> {
+                return DatabaseClient(applicationContext).getAppDatabase().genericDAO.loadAllFtpClients()
+            }
+        }.execute().get()
+    }
+
+    private fun createFtpConnection(ftpClient: FtpClient): FTPClient? {
+        return object : AsyncTask<Void, Void,FTPClient>() {
+            override fun doInBackground(vararg voids: Void):FTPClient {
+                var ftp = FTPClient()
+                try {
+                    var config = FTPClientConfig()
+                    ftp.defaultTimeout = 5000
+                    ftp.configure(config)
+
+                    ftp.connect(ftpClient!!.server)
+
+                    var reply = ftp.replyCode
+
+                    if (!FTPReply.isPositiveCompletion(reply)) {
+                        ftp.disconnect()
+                    }
+                    ftp.autodetectUTF8 = true
+                    ftp.controlEncoding = "UTF-8"
+
+                    ftp.login(ftpClient.user, ftpClient.password)
+                }catch (e: Exception){
+                    e.printStackTrace()
+                    startForeground(NOTIFICATION_ID, getNotification("ERROR", e.message.toString()))
+                    System.err.println("Could not connect to server...")
+                }
+
+                return ftp
+            }
+        }.execute().get()
     }
 
     private fun getSyncDataForClient(ftpClientId: Int, syncDataList: Array<SyncData>): List<SyncData> {
@@ -156,12 +229,17 @@ class SyncDataService : Service() {
     }
 
     private fun remoteFileExists(localFile: File, remoteFiles: Array<FTPFile>): Boolean {
-        remoteFiles.forEach { remoteFile ->
-            if (remoteFile.name == localFile.name) {
-                return true
+        return object : AsyncTask<Void, Void, Boolean>() {
+            override fun doInBackground(vararg voids: Void): Boolean {
+                remoteFiles.forEach { remoteFile ->
+                    if (remoteFile.name == localFile.name) {
+                        return true
+                    }
+                }
+                return false
             }
-        }
-        return false
+        }.execute().get()
+
     }
 
     private fun getNotification(title: String, content: String): Notification {

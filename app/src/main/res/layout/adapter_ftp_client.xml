@@ -28,6 +28,14 @@
         android:drawableLeft="@mipmap/icons8_folder_50" />
 
     <Button
+        android:id="@+id/btnViewSyncData"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".15"
+        android:drawableStart="@android:drawable/ic_menu_agenda"
+        android:drawableLeft="@android:drawable/ic_menu_agenda" />
+
+    <Button
         android:id="@+id/btnStartSync"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
