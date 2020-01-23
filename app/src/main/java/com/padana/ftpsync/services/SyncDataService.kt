@@ -4,20 +4,21 @@ import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
-import android.os.AsyncTask
-import android.os.Build
-import android.os.IBinder
-import android.os.Process
-import android.os.SystemClock
+import android.os.*
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.PRIORITY_MAX
+import com.jcraft.jsch.ChannelSftp
+import com.jcraft.jsch.JSch
+import com.jcraft.jsch.Session
 import com.padana.ftpsync.R
 import com.padana.ftpsync.activities.ftp_connections.FtpConnectionsActivity
 import com.padana.ftpsync.database.DatabaseClient
 import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.entities.SyncData
-import com.padana.ftpsync.utils.FTPUtils
+import com.padana.ftpsync.services.utils.FTPUtils
+import com.padana.ftpsync.services.utils.SFTPUtils
+import com.padana.ftpsync.utils.ConnTypes
 import org.apache.commons.net.ftp.FTPClient
 import org.apache.commons.net.ftp.FTPClientConfig
 import org.apache.commons.net.ftp.FTPFile
@@ -25,7 +26,7 @@ import org.apache.commons.net.ftp.FTPReply
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
-import java.lang.RuntimeException
+import java.util.*
 
 
 class SyncDataService : Service() {
@@ -35,7 +36,7 @@ class SyncDataService : Service() {
     private val TIME_TO_WAIT = 60
     private var NO_OF_RETRIES = 0
     lateinit var ftpClientsList: Array<FtpClient>
-    private var ftpClientConnectionsMap: MutableMap<Int, FTPClient> =  mutableMapOf()
+    private var ftpClientConnectionsMap: MutableMap<Int, Any> = mutableMapOf()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return START_STICKY
@@ -44,16 +45,26 @@ class SyncDataService : Service() {
     override fun onCreate() {
         super.onCreate()
         startForeground()
-        ftpClientsList = loadAllFtpClients()!!
-        ftpClientsList.forEach { ftpClient ->
-            ftpClientConnectionsMap[ftpClient.id!!] = createFtpConnection(ftpClient)!!
-        }
+        loadFtpClients()
         Thread(Runnable {
             run {
                 Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
                 doSync()
             }
         }).start()
+    }
+
+    private fun loadFtpClients() {
+        ftpClientsList = loadAllFtpClients()!!
+        ftpClientsList.forEach { ftpClient ->
+            if (ftpClientConnectionsMap[ftpClient.id] == null) {
+                if (ftpClient.connectionType!!.toLowerCase().equals(ConnTypes.FTP)) {
+                    ftpClientConnectionsMap[ftpClient.id!!] = createFtpConnection(ftpClient)!!
+                } else if (ftpClient.connectionType!!.toLowerCase().equals(ConnTypes.SFTP)) {
+                    ftpClientConnectionsMap[ftpClient.id!!] = createSFTPConnection(ftpClient)!!
+                }
+            }
+        }
     }
 
     override fun onBind(intent: Intent): IBinder {
@@ -101,30 +112,15 @@ class SyncDataService : Service() {
         var syncDataList = loadAllSyncData()!!
         ftpClientsList.forEach { ftpClient ->
             val syncDataForClient: List<SyncData> = getSyncDataForClient(ftpClient.id!!, syncDataList)
+            var storeFilesList: MutableList<MutableList<StoreFiles>> = mutableListOf()
 
             try {
-                var ftp =ftpClientConnectionsMap[ftpClient.id!!]!!
-
+                var ftp = ftpClientConnectionsMap[ftpClient.id!!]!!
                 syncDataForClient.forEach { syncData ->
-                    var directoryExists = checkDirectoryExists(ftp, syncData)
-                    if (!directoryExists) {
-                        FTPUtils.makeDirectories(ftp, syncData.serverPath!!)
-                    }
-                    var remoteFiles: Array<FTPFile> = listRemoteFiles(ftp, syncData)
-                    if(syncData.localPath == null){
-                        throw RuntimeException("Path is null!")
-                    }
-                    var localFiles: Array<File> = File(syncData.localPath).listFiles()
-                    if (remoteFiles.size != localFiles.size) {
-                        localFiles.forEach { localFile ->
-                            if (!remoteFileExists(localFile, remoteFiles)) {
-                                if (!localFile.isDirectory) {
-                                    storeFileOnRemote(localFile, ftp, syncData)
-                                }else{
-
-                                }
-                            }
-                        }
+                    if (ftpClient.connectionType!!.toLowerCase().equals(ConnTypes.FTP)) {
+                        computeFilesFTP(ftp, syncData)
+                    } else if (ftpClient.connectionType!!.toLowerCase().equals(ConnTypes.SFTP)) {
+                        storeFilesList.add(computeFilesSFTP(ftp, syncData))
                     }
                 }
             } catch (e: Exception) {
@@ -132,15 +128,94 @@ class SyncDataService : Service() {
                 startForeground(NOTIFICATION_ID, getNotification("ERROR", e.message.toString()))
                 System.err.println("Could not connect to server...")
             }
+            if (ftpClient.connectionType!!.toLowerCase().equals(ConnTypes.SFTP)) {
+                var count = 0
+                storeFilesList.forEach { storeList -> count += storeList.size }
+                if (count > 0) {
+                    startForeground(NOTIFICATION_ID,
+                            getNotification("Found Files", "Found " + count + " files for " + ftpClient.hostName + ". Start sync..."))
+                    storeFilesList.forEach { storeList ->
+                        storeList.map { storeFile ->
+                            SFTPUtils.storeFileOnRemote(storeFile.localFile, (ftpClientConnectionsMap[ftpClient.id!!] as ChannelSftp?)!!, storeFile.syncData)
+                            count -= 1
+                            startForeground(NOTIFICATION_ID,
+                                    getNotification("Remaining Files", count.toString() + " remaining files for " + ftpClient.hostName))
+                        }
+                    }
+                }
 
-            if (NO_OF_RETRIES == TIMES_TO_RETRY) {
-                Thread.sleep(TIME_TO_WAIT * 60000L)
-                NO_OF_RETRIES = 0
+                startForeground(NOTIFICATION_ID,
+                        getNotification("Waiting...", "Waiting for files..."))
             }
-            Thread.sleep(10000)
-            NO_OF_RETRIES = NO_OF_RETRIES++
-            this.doSync()
         }
+
+        if (NO_OF_RETRIES == TIMES_TO_RETRY) {
+            Thread.sleep(TIME_TO_WAIT * 60000L)
+            NO_OF_RETRIES = 0
+        }
+        Thread.sleep(10000)
+        NO_OF_RETRIES = NO_OF_RETRIES++
+
+        this.doSync()
+    }
+
+    private fun computeFilesFTP(ftp: Any, syncData: SyncData) {
+        var directoryExists = checkDirectoryExists(ftp as FTPClient, syncData)
+        if (!directoryExists) {
+            FTPUtils.makeDirectories(ftp, syncData.serverPath!!)
+        }
+        var remoteFiles: Array<FTPFile> = listRemoteFiles(ftp, syncData)
+        if (syncData.localPath == null) {
+            throw RuntimeException("Path is null!")
+        }
+        var localFiles: Array<File> = File(syncData.localPath).listFiles()
+        if (remoteFiles.size != localFiles.size) {
+            localFiles.forEach { localFile ->
+                if (!remoteFileExists(localFile, remoteFiles)) {
+                    if (!localFile.isDirectory) {
+                        storeFileOnRemote(localFile, ftp, syncData)
+                    } else {
+
+                    }
+                }
+            }
+        }
+    }
+
+    private fun computeFilesSFTP(sftp: Any, syncData: SyncData): MutableList<StoreFiles> {
+        var directoryExists = SFTPUtils.checkDirectoryExists(sftp as ChannelSftp, syncData.serverPath!!)
+        if (!directoryExists) {
+            SFTPUtils.makeDirectories(sftp, syncData.serverPath!!)
+        }
+        // sftp.cd(syncData.serverPath)
+
+        var remoteFiles: Vector<*>? = SFTPUtils.listFiles(sftp, syncData)
+        if (syncData.localPath == null) {
+            throw RuntimeException("Path is null!")
+        }
+
+        val storeFilesList: MutableList<StoreFiles> = mutableListOf()
+        var storeFile = StoreFiles
+
+        var localFiles: Array<File>? = File(syncData.localPath).listFiles()
+        if (localFiles != null && remoteFiles!!.size != localFiles.size) {
+            localFiles.forEach { localFile ->
+                if (!SFTPUtils.remoteFileExists(localFile, remoteFiles as Vector<ChannelSftp.LsEntry>)) {
+                    if (!localFile.isDirectory) {
+                        // SFTPUtils.storeFileOnRemote(localFile, sftp, syncData)
+                        storeFile.localFile = localFile
+                        storeFile.syncData = syncData
+                        storeFilesList.add(storeFile)
+                    } else {
+
+                    }
+                }
+            }
+        }
+        /*storeFilesList.forEach { storeFile ->
+            SFTPUtils.storeFileOnRemote(storeFile.localFile, sftp, storeFile.syncData)
+        }*/
+        return storeFilesList
     }
 
     private fun listRemoteFiles(ftp: FTPClient, syncData: SyncData): Array<FTPFile> =
@@ -162,7 +237,7 @@ class SyncDataService : Service() {
         return object : AsyncTask<Void, Void, Void>() {
             override fun doInBackground(vararg voids: Void?): Void? {
                 val bis = BufferedInputStream(FileInputStream(localFile))
-                ftp.storeFile( syncData.serverPath + "/" + localFile.name, bis)
+                ftp.storeFile(syncData.serverPath + "/" + localFile.name, bis)
                 bis.close()
                 return null
             }
@@ -186,16 +261,16 @@ class SyncDataService : Service() {
     }
 
     private fun loadAllFtpClients(): Array<FtpClient>? {
-        return object : AsyncTask<Void, Void,Array<FtpClient>>() {
-            override fun doInBackground(vararg voids: Void):Array<FtpClient> {
+        return object : AsyncTask<Void, Void, Array<FtpClient>>() {
+            override fun doInBackground(vararg voids: Void): Array<FtpClient> {
                 return DatabaseClient(applicationContext).getAppDatabase().genericDAO.loadAllFtpClients()
             }
         }.execute().get()
     }
 
     private fun createFtpConnection(ftpClient: FtpClient): FTPClient? {
-        return object : AsyncTask<Void, Void,FTPClient>() {
-            override fun doInBackground(vararg voids: Void):FTPClient {
+        return object : AsyncTask<Void, Void, FTPClient>() {
+            override fun doInBackground(vararg voids: Void): FTPClient {
                 var ftp = FTPClient()
                 try {
                     var config = FTPClientConfig()
@@ -213,13 +288,43 @@ class SyncDataService : Service() {
                     ftp.controlEncoding = "UTF-8"
 
                     ftp.login(ftpClient.user, ftpClient.password)
-                }catch (e: Exception){
+                    ftp.enterLocalPassiveMode()
+                } catch (e: Exception) {
                     e.printStackTrace()
                     startForeground(NOTIFICATION_ID, getNotification("ERROR", e.message.toString()))
                     System.err.println("Could not connect to server...")
                 }
 
                 return ftp
+            }
+        }.execute().get()
+    }
+
+    private fun createSFTPConnection(ftpClient: FtpClient): ChannelSftp? {
+        return object : AsyncTask<Void, Void, ChannelSftp>() {
+            override fun doInBackground(vararg voids: Void): ChannelSftp {
+                var sftpChannel = ChannelSftp()
+                try {
+                    val jsch = JSch()
+
+                    val config = Properties()
+                    config["StrictHostKeyChecking"] = "no"
+
+                    val session: Session = jsch.getSession(ftpClient.user, ftpClient.server)
+                    session.setPassword(ftpClient.password)
+                    session.setConfig(config)
+                    session.connect()
+
+                    sftpChannel = session.openChannel("sftp") as ChannelSftp
+                    sftpChannel.connect()
+                    return sftpChannel
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    startForeground(NOTIFICATION_ID, getNotification("ERROR", e.message.toString()))
+                    System.err.println("Could not connect to server...")
+                }
+
+                return sftpChannel
             }
         }.execute().get()
     }
@@ -266,5 +371,10 @@ class SyncDataService : Service() {
                 .setContentText(content)
                 .setAutoCancel(true)
                 .build()
+    }
+
+    object StoreFiles {
+        lateinit var localFile: File
+        lateinit var syncData: SyncData
     }
 }

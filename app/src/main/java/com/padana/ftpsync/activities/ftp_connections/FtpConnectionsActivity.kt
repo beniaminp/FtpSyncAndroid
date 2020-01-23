@@ -53,14 +53,16 @@ class FtpConnectionsActivity : AppCompatActivity() {
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if(requestCode == 9999){
-            val uri: Uri = data!!.data!!
-            val docUri: Uri = DocumentsContract.buildDocumentUriUsingTree(uri,
-                    DocumentsContract.getTreeDocumentId(uri))
-            val path: String? = FileHelpers.getPath(this, docUri)
+        if (requestCode == 9999) {
+            if (data != null && data.data != null) {
+                val uri: Uri = data!!.data!!
+                val docUri: Uri = DocumentsContract.buildDocumentUriUsingTree(uri,
+                        DocumentsContract.getTreeDocumentId(uri))
+                val path: String? = FileHelpers.getPath(this, docUri)
 
-            insertFolderSyncData(path!!, selectedFtpClient!!)
-            selectedFtpClient = null
+                insertFolderSyncData(path!!, selectedFtpClient!!)
+                selectedFtpClient = null
+            }
         }
     }
 
@@ -152,9 +154,9 @@ class FtpConnectionsActivity : AppCompatActivity() {
     }
 
     private fun chooseFolderSync(ftpClient: FtpClient) {
-       /* val intent = Intent(this, ChooseLocalFolder::class.java)
-        intent.putExtra("ftpClient", ftpClient)
-        startActivity(intent)*/
+        /* val intent = Intent(this, ChooseLocalFolder::class.java)
+         intent.putExtra("ftpClient", ftpClient)
+         startActivity(intent)*/
         selectedFtpClient = ftpClient
         val i = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
         i.addCategory(Intent.CATEGORY_DEFAULT)
@@ -194,7 +196,7 @@ class FtpConnectionsActivity : AppCompatActivity() {
     private fun insertFolderSyncData(folderPath: String, ftpClient: FtpClient) {
         object : AsyncTask<Void, Void, Void>() {
             override fun doInBackground(vararg voids: Void): Void? {
-                var syncData = SyncData(null, ftpClient!!.id, folderPath, ftpClient.rootLocation+"/"+Build.MODEL + folderPath)
+                var syncData = SyncData(null, ftpClient!!.id, folderPath, ftpClient.rootLocation + "/" + Build.MODEL + folderPath)
                 DatabaseClient(applicationContext).getAppDatabase().genericDAO.insertSyncData(syncData)
                 return null
             }

@@ -46,7 +46,7 @@ class FtpConnectionsListAdapter(mContext: Context,
             )
         }
         val ftpClient: FtpClient = ftpClientsList[position]
-        listItem!!.findViewById<TextView>(R.id.tvFtpClientName).text = ftpClient.server
+        listItem!!.findViewById<TextView>(R.id.tvFtpClientName).text = ftpClient.hostName
 
         listItem.findViewById<TextView>(R.id.tvFtpClientName).setOnClickListener { itemClickListener.onBtnClick(position) }
         listItem.findViewById<TextView>(R.id.btnFtpClientDelete).setOnClickListener { editClickListener.onBtnClick(position) }

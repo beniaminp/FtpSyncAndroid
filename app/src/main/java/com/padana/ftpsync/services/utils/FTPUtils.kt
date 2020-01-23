@@ -1,4 +1,4 @@
-package com.padana.ftpsync.utils
+package com.padana.ftpsync.services.utils
 
 import android.os.AsyncTask
 import org.apache.commons.net.ftp.FTPClient
@@ -8,23 +8,27 @@ object FTPUtils {
     @Throws(IOException::class)
     fun makeDirectories(ftpClient: FTPClient, dirPath: String): Boolean {
         val pathElements = dirPath.split("/").toTypedArray()
+        var partialPath = ""
+
         if (pathElements != null && pathElements.isNotEmpty()) {
             for (singleDir in pathElements) {
                 if(singleDir== ""){
                     continue
                 }
-                val existed: Boolean = createDirectory(ftpClient, singleDir)
+                partialPath += singleDir
+                val existed: Boolean = checkDirectoryExists(ftpClient, partialPath)
                 if (!existed) {
-                    val created: Boolean = createDirectory(ftpClient, singleDir)
+                    val created: Boolean = createDirectory(ftpClient, partialPath)
                     if (created) {
-                        println("CREATED directory:"+ singleDir)
-                        checkDirectoryExists(ftpClient, singleDir)
+                        println("CREATED directory:"+ partialPath)
+                        checkDirectoryExists(ftpClient, partialPath)
                     } else {
                         println("Reply code is "+ ftpClient.replyCode)
-                        println("COULD NOT create directory: "+singleDir)
+                        println("COULD NOT create directory: "+partialPath)
                         return false
                     }
                 }
+                partialPath += "/"
             }
         }
         return true

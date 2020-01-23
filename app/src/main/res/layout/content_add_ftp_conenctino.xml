@@ -11,8 +11,8 @@
     <TableLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:stretchColumns="0,1"
-        android:padding="10dp">
+        android:padding="10dp"
+        android:stretchColumns="0,1">
 
         <TableRow
             android:layout_width="match_parent"
@@ -32,6 +32,23 @@
             android:layout_height="match_parent">
 
             <TextView
+                android:id="@+id/tvHostName"
+                android:text="@string/hostName"
+                android:textAppearance="@style/TextAppearance.AppCompat.Small" />
+
+            <EditText
+                android:id="@+id/txtHostName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:inputType="text" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
                 android:id="@+id/tvFtpHost"
                 android:text="@string/ftp_host"
                 android:textAppearance="@style/TextAppearance.AppCompat.Small" />
@@ -41,8 +58,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:ems="10"
-                android:inputType="text"
-                android:text="@string/hostTemplate" />
+                android:inputType="text" />
         </TableRow>
 
         <TableRow
@@ -59,15 +75,15 @@
                 android:id="@+id/txtFtpUser"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:autofillHints=""
                 android:ems="10"
-                android:inputType="text"
-                android:text="@string/userTemplate"
-                android:autofillHints=""/>
+                android:inputType="text" />
         </TableRow>
 
         <TableRow
             android:layout_width="match_parent"
             android:layout_height="match_parent">
+
             <TextView
                 android:id="@+id/tvFtpPassword"
                 android:text="@string/ftp_password"
@@ -78,13 +94,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:ems="10"
-                android:inputType="textPassword"
-                android:text="@string/passwordTemplate" />
+                android:inputType="textPassword" />
         </TableRow>
 
         <TableRow
             android:layout_width="match_parent"
             android:layout_height="match_parent">
+
             <TextView
                 android:id="@+id/tvRootFileLocation"
                 android:text="@string/ftp_root_location"
@@ -96,6 +112,24 @@
                 android:layout_height="wrap_content"
                 android:ems="10"
                 android:inputType="text" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/tvConnectionType"
+                android:text="@string/connection_type"
+                android:textAppearance="@style/TextAppearance.AppCompat.Small" />
+
+            <Spinner
+                android:id="@+id/spinnerConnectionType"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@android:drawable/btn_dropdown"
+                android:spinnerMode="dropdown"
+                android:textAppearance="@style/TextAppearance.AppCompat.Small" />
         </TableRow>
 
         <TableRow

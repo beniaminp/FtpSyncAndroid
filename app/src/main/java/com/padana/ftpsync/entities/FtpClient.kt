@@ -11,5 +11,7 @@ data class FtpClient(
         var server: String?,
         var user: String?,
         var password: String?,
-        var rootLocation: String?
+        var rootLocation: String?,
+        var connectionType: String?,
+        var hostName: String?
 ) : Serializable

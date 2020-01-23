@@ -23,4 +23,11 @@
     <string name="title_activity_choose_local_folder">ChooseLocalFolder</string>
     <string name="title_activity_view_sync_data">ViewSyncData</string>
     <string name="ftp_root_location">Root Location</string>
+    <string name="connection_type">Connection Type</string>
+    <string name="ftpOrSftp">FTP or SFTP</string>
+    <string name="hostName">Name</string>
+    <string-array name="connTypesArray">
+        <item>FTP</item>
+        <item>SFTP</item>
+    </string-array>
 </resources>
