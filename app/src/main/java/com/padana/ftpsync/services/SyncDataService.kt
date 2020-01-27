@@ -61,7 +61,7 @@ class SyncDataService : Service() {
                 if (ftpClient.connectionType!!.toLowerCase().equals(ConnTypes.FTP)) {
                     ftpClientConnectionsMap[ftpClient.id!!] = createFtpConnection(ftpClient)!!
                 } else if (ftpClient.connectionType!!.toLowerCase().equals(ConnTypes.SFTP)) {
-                    ftpClientConnectionsMap[ftpClient.id!!] = createSFTPConnection(ftpClient)!!
+                    this.ftpClientConnectionsMap[ftpClient.id!!] = createSFTPConnection(ftpClient)!!
                 }
             }
         }
@@ -134,12 +134,12 @@ class SyncDataService : Service() {
                 if (count > 0) {
                     startForeground(NOTIFICATION_ID,
                             getNotification("Found Files", "Found " + count + " files for " + ftpClient.hostName + ". Start sync..."))
-                    storeFilesList.forEach { storeList ->
-                        storeList.map { storeFile ->
+                    for ((index, storeList) in storeFilesList.withIndex()) {
+                        storeList.forEach { storeFile ->
                             SFTPUtils.storeFileOnRemote(storeFile.localFile, (ftpClientConnectionsMap[ftpClient.id!!] as ChannelSftp?)!!, storeFile.syncData)
-                            count -= 1
+                            // count -= 1
                             startForeground(NOTIFICATION_ID,
-                                    getNotification("Remaining Files", count.toString() + " remaining files for " + ftpClient.hostName))
+                                    getNotification("Sending files...", index.toString() + " of " + storeList.size + " files for " + ftpClient.hostName))
                         }
                     }
                 }
@@ -195,14 +195,13 @@ class SyncDataService : Service() {
         }
 
         val storeFilesList: MutableList<StoreFiles> = mutableListOf()
-        var storeFile = StoreFiles
 
         var localFiles: Array<File>? = File(syncData.localPath).listFiles()
         if (localFiles != null && remoteFiles!!.size != localFiles.size) {
             localFiles.forEach { localFile ->
                 if (!SFTPUtils.remoteFileExists(localFile, remoteFiles as Vector<ChannelSftp.LsEntry>)) {
                     if (!localFile.isDirectory) {
-                        // SFTPUtils.storeFileOnRemote(localFile, sftp, syncData)
+                        var storeFile = StoreFiles()
                         storeFile.localFile = localFile
                         storeFile.syncData = syncData
                         storeFilesList.add(storeFile)
@@ -373,7 +372,7 @@ class SyncDataService : Service() {
                 .build()
     }
 
-    object StoreFiles {
+    class StoreFiles {
         lateinit var localFile: File
         lateinit var syncData: SyncData
     }

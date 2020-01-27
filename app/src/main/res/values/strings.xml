@@ -26,6 +26,8 @@
     <string name="connection_type">Connection Type</string>
     <string name="ftpOrSftp">FTP or SFTP</string>
     <string name="hostName">Name</string>
+    <string name="exit">Exit</string>
+    <string name="help">Help</string>
     <string-array name="connTypesArray">
         <item>FTP</item>
         <item>SFTP</item>

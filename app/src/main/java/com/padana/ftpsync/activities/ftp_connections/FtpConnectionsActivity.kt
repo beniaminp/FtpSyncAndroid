@@ -6,6 +6,9 @@ import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
 import android.provider.DocumentsContract
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import com.padana.ftpsync.R
@@ -28,6 +31,7 @@ import kotlinx.android.synthetic.main.progress_dialog.*
 
 class FtpConnectionsActivity : AppCompatActivity() {
     lateinit var genericDAO: GenericDAO
+    lateinit var syncDataServiceIntent: Intent
     var selectedFtpClient: FtpClient? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,7 +39,9 @@ class FtpConnectionsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_ftp_connections)
         setSupportActionBar(toolbar)
 
-        startService(Intent(this, SyncDataService::class.java))
+        syncDataServiceIntent = Intent(this, SyncDataService::class.java)
+
+        startService(syncDataServiceIntent)
 
         genericDAO = DatabaseClient(applicationContext).getAppDatabase().genericDAO
 
@@ -205,6 +211,27 @@ class FtpConnectionsActivity : AppCompatActivity() {
 
     override fun onBackPressed() {
         moveTaskToBack(true)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        val inflater: MenuInflater = menuInflater
+        inflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        // Handle item selection
+        return when (item.itemId) {
+            R.id.exit -> {
+                stopService(syncDataServiceIntent)
+                android.os.Process.killProcess(android.os.Process.myPid())
+                true
+            }
+            R.id.help -> {
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
 }
