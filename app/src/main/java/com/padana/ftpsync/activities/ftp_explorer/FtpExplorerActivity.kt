@@ -39,9 +39,9 @@ class FtpExplorerActivity : AppCompatActivity() {
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show()
         }
-        var bundel = intent.extras
-        ftpClient = bundel!!.getSerializable("ftpClient") as FtpClient
-        localFolder = bundel.getSerializable("localFolder") as Folder
+        var bundle = intent.extras
+        ftpClient = bundle?.getSerializable("ftpClient") as FtpClient
+        localFolder = bundle.getSerializable("localFolder") as Folder
 
         getFtpFileList("/")
     }
