@@ -11,7 +11,8 @@ object InternetUtils {
                 try {
                     val address: InetAddress = InetAddress.getByName("www.google.com")
                     return !address.equals("")
-                } catch (e: UnknownHostException) { // Log error
+                } catch (e: UnknownHostException) {
+                    LogerFileUtils.error(e.message!!)// Log error
                 }
                 return false
             }

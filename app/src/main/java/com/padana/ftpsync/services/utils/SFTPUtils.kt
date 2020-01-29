@@ -2,7 +2,7 @@ package com.padana.ftpsync.services.utils
 
 import android.os.AsyncTask
 import com.jcraft.jsch.ChannelSftp
-import com.jcraft.jsch.SftpProgressMonitor
+import com.jcraft.jsch.SftpException
 import com.padana.ftpsync.entities.SyncData
 import java.io.BufferedInputStream
 import java.io.File
@@ -16,6 +16,7 @@ object SFTPUtils {
                 try {
                     sftp.mkdir(dirPath)
                 } catch (e: Exception) {
+                    LogerFileUtils.error(e.message!!)
                     e.printStackTrace()
                 }
                 return null
@@ -40,7 +41,9 @@ object SFTPUtils {
                     }
                     return false
                 } catch (e: Exception) {
+                    LogerFileUtils.error(e.message!!)
                     e.printStackTrace()
+
                     return false
                 }
             }
@@ -61,13 +64,18 @@ object SFTPUtils {
 
     }
 
-    fun storeFileOnRemote(localFile: File, sftp: ChannelSftp, syncData: SyncData): Void? {
-        return object : AsyncTask<Void, Void, Void>() {
-            override fun doInBackground(vararg voids: Void?): Void? {
+    fun storeFileOnRemote(localFile: File, sftp: ChannelSftp, syncData: SyncData): Boolean? {
+        return object : AsyncTask<Void, Void, Boolean>() {
+            override fun doInBackground(vararg voids: Void?): Boolean? {
                 val bis = BufferedInputStream(FileInputStream(localFile))
-                sftp.put(localFile.absolutePath, syncData.serverPath + "/" + localFile.name)
+                try {
+                    sftp.put(localFile.absolutePath, syncData.serverPath + "/" + localFile.name)
+                } catch (e: SftpException) {
+                    LogerFileUtils.error(e.message!! + " => " + localFile.name)
+                    return false
+                }
                 bis.close()
-                return null
+                return true
             }
         }.execute().get()
     }

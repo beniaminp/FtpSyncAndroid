@@ -1,24 +1,22 @@
 package com.padana.ftpsync.services
 
-import android.app.*
+import android.app.AlarmManager
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
-import android.os.*
-import androidx.annotation.RequiresApi
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationCompat.PRIORITY_MAX
+import android.os.AsyncTask
+import android.os.IBinder
+import android.os.Process
+import android.os.SystemClock
 import com.jcraft.jsch.ChannelSftp
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.Session
-import com.padana.ftpsync.R
-import com.padana.ftpsync.activities.ftp_connections.FtpConnectionsActivity
 import com.padana.ftpsync.database.DatabaseClient
 import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.entities.SyncData
-import com.padana.ftpsync.services.utils.FTPUtils
-import com.padana.ftpsync.services.utils.InternetUtils
-import com.padana.ftpsync.services.utils.SFTPUtils
+import com.padana.ftpsync.services.utils.*
 import com.padana.ftpsync.utils.ConnTypes
 import org.apache.commons.net.ftp.FTPClient
 import org.apache.commons.net.ftp.FTPClientConfig
@@ -46,14 +44,16 @@ class SyncDataService : Service() {
     override fun onCreate() {
         super.onCreate()
         startForeground()
-        if (!InternetUtils.isInternetAvailable()) {
-            startForeground(NOTIFICATION_ID,
-                    getNotification("No internet...", "Please connect to a network and retry"))
-            Thread.sleep(TIME_TO_WAIT * 60000L)
-        }
-        loadRemoteClients()
+
         Thread(Runnable {
             run {
+                while (!InternetUtils.isInternetAvailable()) {
+                    startForeground(NOTIFICATION_ID,
+                            NotifUtils.getNotification("No internet...", "Please connect to a network and retry"))
+                    LogerFileUtils.error("No internet... Please connect to a network and retry")
+                    Thread.sleep(TIME_TO_WAIT * 60L)
+                }
+                loadRemoteClients()
                 Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
                 doSync()
             }
@@ -97,31 +97,17 @@ class SyncDataService : Service() {
     private fun startForeground() {
         notificationManger = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        startForeground(NOTIFICATION_ID, getNotification("FTP Sync", "Started in background..."))
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun createNotificationChannel(): String {
-        val channelId = "my_service"
-        val channelName = "Ftp Sync Background Servuce"
-        val chan = NotificationChannel(channelId,
-                channelName, NotificationManager.IMPORTANCE_HIGH)
-        chan.lightColor = Color.BLUE
-        chan.importance = NotificationManager.IMPORTANCE_NONE
-        chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
-        val service = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        service.createNotificationChannel(chan)
-        return channelId
+        startForeground(NOTIFICATION_ID, NotifUtils.getNotification("FTP Sync", "Started in background..."))
     }
 
     private fun doSync() {
-        var syncDataList = loadAllSyncData()!!
+        val syncDataList = loadAllSyncData()!!
         ftpClientsList.forEach { ftpClient ->
             val syncDataForClient: List<SyncData> = getSyncDataForClient(ftpClient.id!!, syncDataList)
-            var storeFilesList: MutableList<MutableList<StoreFiles>> = mutableListOf()
+            val storeFilesList: MutableList<MutableList<StoreFiles>> = mutableListOf()
 
             try {
-                var ftp = ftpClientConnectionsMap[ftpClient.id!!]
+                val ftp = ftpClientConnectionsMap[ftpClient.id!!]
 
                 syncDataForClient.forEach { syncData ->
                     if (ftpClient.connectionType?.toLowerCase(Locale.ROOT).equals(ConnTypes.FTP)) {
@@ -138,8 +124,8 @@ class SyncDataService : Service() {
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                startForeground(NOTIFICATION_ID, getNotification("ERROR", e.message.toString()))
-                System.err.println("Could not connect to server...")
+                LogerFileUtils.error(e.message!!)
+                startForeground(NOTIFICATION_ID, NotifUtils.getNotification("ERROR", e.message.toString()))
             }
             if (ftpClient.connectionType?.toLowerCase(Locale.ROOT) == ConnTypes.SFTP) {
                 sendSftpFilesToServer(storeFilesList, ftpClient)
@@ -161,19 +147,28 @@ class SyncDataService : Service() {
         storeFilesList.forEach { storeList -> count += storeList.size }
         if (count > 0) {
             startForeground(NOTIFICATION_ID,
-                    getNotification("Found Files", "Found " + count + " files for " + ftpClient.hostName + ". Start sync..."))
-            for ((index, storeList) in storeFilesList.withIndex()) {
+                    NotifUtils.getNotification("Found Files", "Found " + count + " files for " + ftpClient.hostName + ". Start sync..."))
+            storeFilesList.forEach { storeList ->
                 storeList.forEach { storeFile ->
-                    SFTPUtils.storeFileOnRemote(storeFile.localFile, (ftpClientConnectionsMap[ftpClient.id!!] as ChannelSftp?)!!, storeFile.syncData)
-                    count -= 1
-                    startForeground(NOTIFICATION_ID,
-                            getNotification("Sending files...", count.toString() + " of " + storeList.size + " files for " + ftpClient.hostName))
+                    val fileCopied: Boolean? = SFTPUtils.storeFileOnRemote(storeFile.localFile, (ftpClientConnectionsMap[ftpClient.id!!] as ChannelSftp?)!!, storeFile.syncData)
+                    fileCopied?.let { isCopied ->
+                        if (isCopied) {
+                            count -= 1
+                            startForeground(NOTIFICATION_ID,
+                                    NotifUtils.getNotification("Sending files...", count.toString() + " of " + storeList.size + " files for " + ftpClient.hostName))
+                            LogerFileUtils.info(storeFile.localFile.name + " sent to " + ftpClient.hostName)
+                        } else {
+                            startForeground(NOTIFICATION_ID,
+                                    NotifUtils.getNotification("Error on file...", "Could not copy file: " + storeFile.localFile))
+                            LogerFileUtils.error(storeFile.localFile.name + " could not be sent to " + ftpClient.hostName)
+                        }
+                    }
                 }
             }
         }
 
         startForeground(NOTIFICATION_ID,
-                getNotification("Waiting...", "Waiting for files..."))
+                NotifUtils.getNotification("Waiting...", "Waiting for files..."))
     }
 
     private fun computeFilesFTP(ftp: Any?, syncData: SyncData) {
@@ -204,7 +199,6 @@ class SyncDataService : Service() {
         if (!directoryExists) {
             SFTPUtils.makeDirectories(sftp, syncData.serverPath!!)
         }
-        // sftp.cd(syncData.serverPath)
 
         var remoteFiles: Vector<*>? = SFTPUtils.listFiles(sftp, syncData)
         if (syncData.localPath == null) {
@@ -307,7 +301,8 @@ class SyncDataService : Service() {
                     ftp.enterLocalPassiveMode()
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    startForeground(NOTIFICATION_ID, getNotification("ERROR", e.message.toString()))
+                    LogerFileUtils.error(e.message!!)
+                    startForeground(NOTIFICATION_ID, NotifUtils.getNotification("ERROR", e.message.toString()))
                     System.err.println("Could not connect to server...")
                 }
 
@@ -337,7 +332,10 @@ class SyncDataService : Service() {
                     return sftpChannel
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    startForeground(NOTIFICATION_ID, getNotification("Conenction error...", "Server " + ftpClient.hostName + " " + e.message!!))
+
+                    LogerFileUtils.error(e.message!!)
+
+                    startForeground(NOTIFICATION_ID, NotifUtils.getNotification("Conenction error...", "Server " + ftpClient.hostName + " " + e.message!!))
                     System.err.println("Could not connect to server...")
                     return null
                 }
@@ -361,33 +359,6 @@ class SyncDataService : Service() {
             }
         }.execute().get()
 
-    }
-
-    private fun getNotification(title: String, content: String): Notification {
-        val intent = Intent(this, FtpConnectionsActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        val pendingIntent: PendingIntent = PendingIntent.getActivity(this, 0, intent, 0)
-
-        val channelId =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    createNotificationChannel()
-                } else {
-                    // If earlier version channel ID is not used
-                    // https://developer.android.com/reference/android/support/v4/app/NotificationCompat.Builder.html#NotificationCompat.Builder(android.content.Context)
-                    ""
-                }
-        val notificationBuilder = NotificationCompat.Builder(this, channelId)
-        return notificationBuilder.setOngoing(true)
-                .setSmallIcon(R.mipmap.ic_launcher)
-                .setPriority(PRIORITY_MAX)
-                .setCategory(Notification.CATEGORY_SERVICE)
-                .setContentIntent(pendingIntent)
-                .setContentTitle(title)
-                .setContentText(content)
-                .setAutoCancel(true)
-                .setOnlyAlertOnce(true)
-                .build()
     }
 
     class StoreFiles {
