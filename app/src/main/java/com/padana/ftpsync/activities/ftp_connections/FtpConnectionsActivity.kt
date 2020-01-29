@@ -37,11 +37,6 @@ class FtpConnectionsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_ftp_connections)
-        setSupportActionBar(toolbar)
-
-        syncDataServiceIntent = Intent(this, SyncDataService::class.java)
-
-        startService(syncDataServiceIntent)
 
         genericDAO = DatabaseClient(applicationContext).getAppDatabase().genericDAO
 
@@ -50,6 +45,14 @@ class FtpConnectionsActivity : AppCompatActivity() {
         }
 
         populateFtpClientList()
+        setSupportActionBar(toolbar)
+
+        syncDataServiceIntent = Intent(this, SyncDataService::class.java)
+        Thread(Runnable {
+            run {
+                startService(syncDataServiceIntent)
+            }
+        }).start()
     }
 
     override fun onResume() {
