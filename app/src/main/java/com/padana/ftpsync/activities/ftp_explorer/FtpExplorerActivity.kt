@@ -8,6 +8,8 @@ import android.widget.ListView
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
+import com.jcraft.jsch.ChannelSftp
+import com.jcraft.jsch.SftpException
 import com.padana.ftpsync.R
 import com.padana.ftpsync.adapters.FolderListAdapter
 import com.padana.ftpsync.database.DatabaseClient
@@ -15,13 +17,17 @@ import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.entities.SyncData
 import com.padana.ftpsync.folder_list.Folder
 import com.padana.ftpsync.interfaces.BtnClickListener
+import com.padana.ftpsync.services.utils.LogerFileUtils
+import com.padana.ftpsync.services.utils.SFTPUtils
 import com.padana.ftpsync.shared.PadanaAsyncTask
+import com.padana.ftpsync.utils.ConnTypes
 import kotlinx.android.synthetic.main.activity_ftp_explorer.*
 import kotlinx.android.synthetic.main.progress_dialog.*
 import org.apache.commons.net.ftp.FTPClient
 import org.apache.commons.net.ftp.FTPClientConfig
 import org.apache.commons.net.ftp.FTPReply
 import java.util.*
+import kotlin.collections.ArrayList
 
 
 class FtpExplorerActivity : AppCompatActivity() {
@@ -41,9 +47,8 @@ class FtpExplorerActivity : AppCompatActivity() {
         }
         var bundle = intent.extras
         ftpClient = bundle?.getSerializable("ftpClient") as FtpClient
-        localFolder = bundle.getSerializable("localFolder") as Folder
 
-        getFtpFileList("/")
+        getFileList(ftpClient.rootLocation + "/" + Build.MODEL)
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -55,14 +60,14 @@ class FtpExplorerActivity : AppCompatActivity() {
         for (path in currentPathArray) {
             currentPath += "$path/"
         }
-        if (currentPath == "/") {
+        if (currentPath == ftpClient.rootLocation + "/" + Build.MODEL + "/") {
             this.finish()
             return
         }
-        getFtpFileList(currentPath)
+        getFileList(currentPath)
     }
 
-    private fun getFtpFileList(path: String) {
+    private fun getFileList(path: String) {
         currentPath = path
         var thisContext = this
 
@@ -73,34 +78,14 @@ class FtpExplorerActivity : AppCompatActivity() {
             }
 
             override fun doInBackground(vararg voids: Any): Any? {
-                var ftp = FTPClient()
-                var config = FTPClientConfig()
-                ftp.configure(config)
-                ftp.connect(ftpClient!!.server)
-
-                var reply = ftp.replyCode
-
-                if (!FTPReply.isPositiveCompletion(reply)) {
-                    ftp.disconnect()
-                    Snackbar.make(View.inflate(thisContext, R.layout.activity_ftp_explorer, null), getString(R.string.connError), Snackbar.LENGTH_LONG)
-                            .setAction(getString(R.string.error), null).show()
-                    return null
-                }
-                ftp.autodetectUTF8 = true
-                ftp.controlEncoding = "UTF-8"
-                ftp.login(ftpClient.user, ftpClient.password)
-
-                val files = ftp.listFiles(path)
                 val folderList = ArrayList<Folder>()
+                if (ftpClient.connectionType!!.toLowerCase() == ConnTypes.SFTP) {
+                    folderList.addAll(listSftpFiles(path))
 
-                for (file in files) {
-                    if (file.name.startsWith(".") || file.name.startsWith("..")) {
-                        continue
-                    }
-                    val folder = Folder(file.name, file.isDirectory, path + "/" + file.name)
-                    folderList.add(folder)
+                } else if (ftpClient.connectionType!!.toLowerCase() == ConnTypes.FTP) {
+                    folderList.addAll(listFtpFile(thisContext, path))
                 }
-                ftp.disconnect()
+
                 return folderList
             }
 
@@ -112,6 +97,58 @@ class FtpExplorerActivity : AppCompatActivity() {
                 dismissProgress()
             }
         }.execute()
+    }
+
+    private fun listSftpFiles(path: String): ArrayList<Folder> {
+        val folderList = ArrayList<Folder>()
+        try {
+            SFTPUtils.createSFTPConnection(ftpClient)?.let { sftpChan ->
+                folderList.addAll(ArrayList(sftpChan.ls(path).filter { file ->
+                    !(file as ChannelSftp.LsEntry).filename.startsWith(".") && !(file as ChannelSftp.LsEntry).filename.startsWith("..")
+                }.map { file ->
+                    var f = file as ChannelSftp.LsEntry
+                    Folder(f.filename, file.attrs.isDir, path + "/" + f.filename)
+                }))
+
+                sftpChan.disconnect()
+            }
+        } catch (e: SftpException) {
+            e.printStackTrace()
+            LogerFileUtils.error(e.message!!)
+        }
+        return folderList
+    }
+
+    private fun listFtpFile(thisContext: FtpExplorerActivity, path: String): ArrayList<Folder> {
+        val folderList: ArrayList<Folder> = ArrayList()
+        val ftp = FTPClient()
+        val config = FTPClientConfig()
+        ftp.configure(config)
+        ftp.connect(ftpClient.server)
+
+        val reply = ftp.replyCode
+
+        if (!FTPReply.isPositiveCompletion(reply)) {
+            ftp.disconnect()
+            Snackbar.make(View.inflate(thisContext, R.layout.activity_ftp_explorer, null), getString(R.string.connError), Snackbar.LENGTH_LONG)
+                    .setAction(getString(R.string.error), null).show()
+            return folderList
+        }
+        ftp.autodetectUTF8 = true
+        ftp.controlEncoding = "UTF-8"
+        ftp.login(ftpClient.user, ftpClient.password)
+
+        val files = ftp.listFiles(path)
+
+        for (file in files) {
+            if (file.name.startsWith(".") || file.name.startsWith("..")) {
+                continue
+            }
+            val folder = Folder(file.name, file.isDirectory, path + "/" + file.name)
+            folderList.add(folder)
+        }
+        ftp.disconnect()
+        return folderList
     }
 
     private fun createListAdapter(thisContext: FtpExplorerActivity, folderList: ArrayList<Folder>) =
@@ -129,7 +166,7 @@ class FtpExplorerActivity : AppCompatActivity() {
             override fun onBtnClick(position: Int) {
                 var folder: Folder = mAdapter!!.folderList[position]
                 if (folder.isFolder) {
-                    getFtpFileList(folder.path)
+                    getFileList(folder.path)
                 }
             }
         }
@@ -140,7 +177,7 @@ class FtpExplorerActivity : AppCompatActivity() {
             override fun onBtnClick(position: Int) {
                 var folder: Folder = mAdapter!!.folderList[position]
                 if (folder.isFolder) {
-                    saveSyncData(folder)
+                    // saveSyncData(folder)
                 }
             }
         }

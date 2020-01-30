@@ -44,12 +44,12 @@ class ChooseLocalFolderAdapter(var mContext: Context,
         val folderName = listItem.findViewById<TextView>(R.id.tv_folder_file_name)
         folderName.text = folder.name
 
-        val itemCheckbox = listItem.findViewById<CheckBox>(R.id.list_view_item_checkbox)
+        /*val itemCheckbox = listItem.findViewById<CheckBox>(R.id.list_view_item_checkbox)
 
         itemCheckbox.setOnCheckedChangeListener { buttonView, isChecked ->
             onCheckChangedListener.onCheckBoxChangedState(position, isChecked)
         }
-        itemCheckbox.isChecked = folder.isSync
+        itemCheckbox.isChecked = folder.isSync*/
 
         return listItem
     }

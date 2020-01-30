@@ -13,7 +13,7 @@ import android.provider.MediaStore
 
 object FileHelpers {
     @TargetApi(Build.VERSION_CODES.KITKAT)
-    fun getPath(context: Context, uri: Uri): String? {
+    fun getLocalPath(context: Context, uri: Uri): String? {
         val isKitKat = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT
         // DocumentProvider
         if (isKitKat && DocumentsContract.isDocumentUri(context, uri)) { // ExternalStorageProvider
@@ -23,6 +23,50 @@ object FileHelpers {
                 val type = split[0]
                 if ("primary".equals(type, ignoreCase = true)) {
                     return Environment.getExternalStorageDirectory().toString() + "/" + split[1]
+                }
+                // TODO handle non-primary volumes
+            } else if (isDownloadsDocument(uri)) {
+                val id = DocumentsContract.getDocumentId(uri)
+                val contentUri: Uri = ContentUris.withAppendedId(
+                        Uri.parse("content://downloads/public_downloads"), java.lang.Long.valueOf(id))
+                return getDataColumn(context, contentUri, null, null)
+            } else if (isMediaDocument(uri)) {
+                val docId = DocumentsContract.getDocumentId(uri)
+                val split = docId.split(":").toTypedArray()
+                val type = split[0]
+                var contentUri: Uri? = null
+                if ("image" == type) {
+                    contentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                } else if ("video" == type) {
+                    contentUri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                } else if ("audio" == type) {
+                    contentUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                }
+                val selection = "_id=?"
+                val selectionArgs = arrayOf(
+                        split[1]
+                )
+                return getDataColumn(context, contentUri, selection, selectionArgs)
+            }
+        } else if ("content".equals(uri.getScheme(), ignoreCase = true)) { // Return the remote address
+            return if (isGooglePhotosUri(uri)) uri.getLastPathSegment() else getDataColumn(context, uri, null, null)
+        } else if ("file".equals(uri.getScheme(), ignoreCase = true)) {
+            return uri.getPath()
+        }
+        return null
+    }
+
+    @TargetApi(Build.VERSION_CODES.KITKAT)
+    fun getServerPath(context: Context, uri: Uri): String? {
+        val isKitKat = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT
+        // DocumentProvider
+        if (isKitKat && DocumentsContract.isDocumentUri(context, uri)) { // ExternalStorageProvider
+            if (isExternalStorageDocument(uri)) {
+                val docId = DocumentsContract.getDocumentId(uri)
+                val split = docId.split(":").toTypedArray()
+                val type = split[0]
+                if ("primary".equals(type, ignoreCase = true)) {
+                    return split[1]
                 }
                 // TODO handle non-primary volumes
             } else if (isDownloadsDocument(uri)) {

@@ -64,12 +64,13 @@ class FtpConnectionsActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == 9999) {
             if (data != null && data.data != null) {
-                val uri: Uri = data!!.data!!
+                val uri: Uri = data.data!!
                 val docUri: Uri = DocumentsContract.buildDocumentUriUsingTree(uri,
                         DocumentsContract.getTreeDocumentId(uri))
-                val path: String? = FileHelpers.getPath(this, docUri)
+                val localPath: String? = FileHelpers.getLocalPath(this, docUri)
+                val path: String? = FileHelpers.getServerPath(this, docUri)
 
-                insertFolderSyncData(path!!, selectedFtpClient!!)
+                insertFolderSyncData(path!!, selectedFtpClient!!, localPath!!)
                 selectedFtpClient = null
             }
         }
@@ -202,10 +203,10 @@ class FtpConnectionsActivity : AppCompatActivity() {
 
     }
 
-    private fun insertFolderSyncData(folderPath: String, ftpClient: FtpClient) {
+    private fun insertFolderSyncData(folderPath: String, ftpClient: FtpClient, localPath: String) {
         object : AsyncTask<Void, Void, Void>() {
             override fun doInBackground(vararg voids: Void): Void? {
-                var syncData = SyncData(null, ftpClient!!.id, folderPath, ftpClient.rootLocation + "/" + Build.MODEL + folderPath)
+                var syncData = SyncData(null, ftpClient!!.id, localPath, ftpClient.rootLocation + "/" + Build.MODEL + "/" + folderPath)
                 DatabaseClient(applicationContext).getAppDatabase().genericDAO.insertSyncData(syncData)
                 return null
             }

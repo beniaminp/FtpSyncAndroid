@@ -11,8 +11,6 @@ import android.os.IBinder
 import android.os.Process
 import android.os.SystemClock
 import com.jcraft.jsch.ChannelSftp
-import com.jcraft.jsch.JSch
-import com.jcraft.jsch.Session
 import com.padana.ftpsync.database.DatabaseClient
 import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.entities.SyncData
@@ -314,22 +312,8 @@ class SyncDataService : Service() {
     private fun createSFTPConnection(ftpClient: FtpClient): ChannelSftp? {
         return object : AsyncTask<Void, Void, ChannelSftp?>() {
             override fun doInBackground(vararg voids: Void): ChannelSftp? {
-                var sftpChannel: ChannelSftp
-                try {
-                    val jsch = JSch()
-
-                    val config = Properties()
-                    config["StrictHostKeyChecking"] = "no"
-
-                    val session: Session = jsch.getSession(ftpClient.user, ftpClient.server)
-                    session.setPassword(ftpClient.password)
-                    session.timeout = 30000
-                    session.setConfig(config)
-                    session.connect()
-
-                    sftpChannel = session.openChannel("sftp") as ChannelSftp
-                    sftpChannel.connect()
-                    return sftpChannel
+                return try {
+                    SFTPUtils.createSFTPConnection(ftpClient)
                 } catch (e: Exception) {
                     e.printStackTrace()
 
@@ -337,7 +321,7 @@ class SyncDataService : Service() {
 
                     startForeground(NOTIFICATION_ID, NotifUtils.getNotification("Conenction error...", "Server " + ftpClient.hostName + " " + e.message!!))
                     System.err.println("Could not connect to server...")
-                    return null
+                    null
                 }
             }
         }.execute().get()

@@ -8,10 +8,10 @@ import java.util.*
 
 
 object LogerFileUtils {
-    val dirName = "/sdcard/sync-app/"
-    val format = SimpleDateFormat("dd_MM_yyy")
-    val dateString = format.format(Date())
-    val loggerName = "logger_" + dateString + ".txt"
+    private val dirName = "/sdcard/sync-app/"
+    private val format = SimpleDateFormat("dd_MM_yyy")
+    private val dateString = format.format(Date())
+    private val loggerName = "logger_" + dateString + ".txt"
 
     fun error(logString: String) {
         val file = File(dirName, loggerName)

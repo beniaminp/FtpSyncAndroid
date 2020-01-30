@@ -14,7 +14,7 @@ import com.padana.ftpsync.entities.SyncData
 class SyncDataAdapter(mContext: Context,
                       resource: Int,
                       ftpClientId: Int,
-                      syncDataList: MutableList<SyncData>): ArrayAdapter<SyncData>(mContext, resource, syncDataList){
+                      syncDataList: MutableList<SyncData>) : ArrayAdapter<SyncData>(mContext, resource, syncDataList) {
 
     var mContext: Context = mContext
     var syncDataList = syncDataList
@@ -48,10 +48,11 @@ class SyncDataAdapter(mContext: Context,
     }
 
     private fun deleteFolderSyncData(pathString: String) {
+        val thisContext = this
         object : AsyncTask<Void, Void, Void>() {
             override fun doInBackground(vararg voids: Void): Void? {
                 var syncData = DatabaseClient(mContext).getAppDatabase().genericDAO.findOneSyncData(ftpClientId!!, pathString)
-                if (syncData.size > 0) {
+                if (syncData.isNotEmpty()) {
                     DatabaseClient(mContext).getAppDatabase().genericDAO.deleteSyncData(*syncData)
                 }
                 return null
