@@ -12,8 +12,8 @@ import android.view.MenuItem
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import com.padana.ftpsync.R
-import com.padana.ftpsync.activities.ftp_explorer.FtpExplorerActivity
 import com.padana.ftpsync.activities.local_explorer.LocalExplorerActivity
+import com.padana.ftpsync.activities.remote_tree.RemoteTreeActivity
 import com.padana.ftpsync.activities.sync_data_view.ViewSyncDataActivity
 import com.padana.ftpsync.adapters.FtpConnectionsListAdapter
 import com.padana.ftpsync.dao.GenericDAO
@@ -152,7 +152,8 @@ class FtpConnectionsActivity : AppCompatActivity() {
     }
 
     private fun goToFtpExplorer(ftpClient: FtpClient) {
-        val intent = Intent(this, FtpExplorerActivity::class.java)
+        // val intent = Intent(this, FtpExplorerActivity::class.java)
+        val intent = Intent(this, RemoteTreeActivity::class.java)
         intent.putExtra("ftpClient", ftpClient)
         startActivity(intent)
     }

@@ -8,31 +8,35 @@
         android:id="@+id/imageView_folder_file"
         android:layout_width="15sp"
         android:layout_height="wrap_content"
-        android:layout_weight=".30" />
+        android:layout_gravity="center_horizontal"
+        android:layout_weight=".30"
+        android:gravity="left" />
 
     <TextView
         android:id="@+id/tv_folder_file_name"
         android:layout_width="0dp"
         android:layout_height="match_parent"
+        android:layout_gravity="center_horizontal"
         android:layout_toRightOf="@id/imageView_folder_file"
         android:layout_weight=".70"
+        android:gravity="left"
         android:textSize="15sp"
         android:textStyle="bold" />
+    <!--
+        <Button
+            android:id="@+id/btnChooseRemoteFolder"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight=".15"
+            android:drawableStart="@drawable/connection_link"
+            android:drawableLeft="@drawable/connection_link" />
 
-    <Button
-        android:id="@+id/btnChooseRemoteFolder"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight=".15"
-        android:drawableStart="@drawable/connection_link"
-        android:drawableLeft="@drawable/connection_link" />
-
-    <Button
-        android:id="@+id/btnSelectFolder"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight=".15"
-        android:drawableStart="@android:drawable/list_selector_background"
-        android:drawableLeft="@android:drawable/list_selector_background" />
+        <Button
+            android:id="@+id/btnSelectFolder"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight=".15"
+            android:drawableStart="@android:drawable/list_selector_background"
+            android:drawableLeft="@android:drawable/list_selector_background" />-->
 
 </LinearLayout>

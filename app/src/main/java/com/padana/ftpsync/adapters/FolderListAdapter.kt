@@ -48,12 +48,12 @@ class FolderListAdapter(mContext: Context,
             )
         }
 
-        listItem!!.findViewById<TextView>(R.id.btnChooseRemoteFolder).visibility = View.INVISIBLE
+    /*    listItem!!.findViewById<TextView>(R.id.btnChooseRemoteFolder).visibility = View.INVISIBLE
         listItem.findViewById<TextView>(R.id.btnSelectFolder).visibility = View.INVISIBLE
 
         if (showChooseFolder) {
             listItem.findViewById<TextView>(R.id.btnChooseRemoteFolder).visibility = View.VISIBLE
-        }
+        }*/
 
         var folder: Folder = folderList[position]
         var image = listItem!!.findViewById<ImageView>(R.id.imageView_folder_file)
@@ -70,18 +70,18 @@ class FolderListAdapter(mContext: Context,
             listItem.findViewById<TextView>(R.id.tv_folder_file_name).setOnClickListener { clickListener.onBtnClick(position) }
         }
 
-        if (linkClickListener != null) {
+/*        if (linkClickListener != null) {
             if (linkedFolders!!.filter { syncData -> syncData.localPath == folder.path }.isNotEmpty()) {
                 listItem.findViewById<TextView>(R.id.btnChooseRemoteFolder).setBackgroundColor(Color.RED)
             }
             listItem.findViewById<TextView>(R.id.btnChooseRemoteFolder).visibility = View.VISIBLE
             listItem.findViewById<TextView>(R.id.btnChooseRemoteFolder).setOnClickListener { linkClickListener.onBtnClick(position) }
-        }
+        }*/
 
-        if (selectFolderClickListener != null) {
+/*        if (selectFolderClickListener != null) {
             listItem.findViewById<TextView>(R.id.btnSelectFolder).visibility = View.VISIBLE
             listItem.findViewById<TextView>(R.id.btnSelectFolder).setOnClickListener { selectFolderClickListener.onBtnClick(position) }
-        }
+        }*/
 
         val params = listItem.layoutParams
         params.height = 40
