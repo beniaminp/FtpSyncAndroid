@@ -1,7 +1,5 @@
-package com.padana.ftpsync.activities.remote_tree
+package com.padana.ftpsync.activities.remote_explorer
 
-import android.content.Intent
-import android.net.Uri
 import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
@@ -12,15 +10,13 @@ import com.google.android.material.snackbar.Snackbar
 import com.jcraft.jsch.ChannelSftp
 import com.jcraft.jsch.SftpException
 import com.padana.ftpsync.R
-import com.padana.ftpsync.activities.remote_tree.holder.TreeNodeHolder
+import com.padana.ftpsync.activities.remote_explorer.adapters.RemoteListAdapter
 import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.folder_list.Folder
 import com.padana.ftpsync.services.utils.LogerFileUtils
 import com.padana.ftpsync.services.utils.SFTPUtils
 import com.padana.ftpsync.utils.ConnTypes
-import com.unnamed.b.atv.model.TreeNode
-import com.unnamed.b.atv.view.AndroidTreeView
-import kotlinx.android.synthetic.main.activity_remote_tree.*
+import kotlinx.android.synthetic.main.activity_remote_explorer.*
 import org.apache.commons.net.ftp.FTPClient
 import org.apache.commons.net.ftp.FTPClientConfig
 import org.apache.commons.net.ftp.FTPReply
@@ -29,64 +25,38 @@ import java.io.FileOutputStream
 import java.util.*
 import kotlin.collections.ArrayList
 
-
-class RemoteTreeActivity : AppCompatActivity() {
-    private var currentPath = "/"
+class RemoteExplorerActivity : AppCompatActivity() {
+    private lateinit var currentPath: String
     private lateinit var ftpClient: FtpClient
+    private lateinit var adapter: RemoteListAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_remote_tree)
+        setContentView(R.layout.activity_remote_explorer)
 
         var bundle = intent.extras
         ftpClient = bundle?.getSerializable("ftpClient") as FtpClient
+        currentPath = ftpClient.rootLocation + "/" + Build.MODEL
+        currentFolderPathTV.text = currentPath
 
-        var folderList: ArrayList<Folder>? = getFileList(ftpClient.rootLocation + "/" + Build.MODEL)
+        adapter = RemoteListAdapter(this, R.layout.remote_list_row, getFileList(currentPath)!!.toMutableList())
+        remote_list.adapter = adapter
 
-        val parent = TreeNode(TreeNodeHolder.IconTreeItem(R.mipmap.expand, ftpClient.hostName!!, null)).setViewHolder(TreeNodeHolder(this))
-
-        val root = TreeNode.root()
-        parent.addChildren(getChildren(folderList, false))
-
-        root.addChild(parent)
-
-        root.isExpanded = true
-
-        val tView = AndroidTreeView(this, root)
-        // tView.setDefaultViewHolder(TreeNodeHolder(this))
-        tView.setDefaultNodeClickListener { node, value ->
-            (value as TreeNodeHolder.IconTreeItem).folder?.let { folder ->
-                if (folder.isFolder && !node.isExpanded && node.children.isEmpty()) {
-                    node.addChildren(getChildren(getFileList(folder.path), node.isExpanded))
-                }
-                if (folder.name.endsWith(".jpg")) {
-                    var intent = Intent(Intent.ACTION_VIEW, Uri.parse("file://" + getFileBytes(folder).absolutePath))
-                    intent.type = "image/*"
-                    startActivity(intent)
-                }
-            }
-        }
-        treeLayout.addView(tView.view)
+        updateListAdapter()
     }
 
-    private fun getChildren(folderList: ArrayList<Folder>?, isExpanded: Boolean): List<TreeNode> {
-        return folderList?.let { list ->
-            list.map { folder ->
-                var icon: Int? = null
-                if (folder.isFolder) {
-                    if (isExpanded) {
-                        icon = R.mipmap.collapse
-                    } else {
-                        icon = R.mipmap.expand
-                    }
-                }
-                TreeNode(TreeNodeHolder.IconTreeItem(icon, folder.name, folder)).setViewHolder(TreeNodeHolder(this))
+    private fun updateListAdapter() {
+        remote_list.setOnItemClickListener { parent, view, position, id ->
+            if (adapter.folderList[position].isFolder) {
+                adapter.folderList = getFileList(adapter.folderList[position].path)!!.toMutableList()
+                adapter.notifyDataSetChanged()
             }
-        }.orEmpty()
+        }
     }
 
     private fun getFileList(path: String): ArrayList<Folder>? {
         currentPath = path
+        currentFolderPathTV.text = currentPath
 
         return object : AsyncTask<Void, Void, ArrayList<Folder>?>() {
             override fun doInBackground(vararg params: Void?): ArrayList<Folder>? {
@@ -102,7 +72,6 @@ class RemoteTreeActivity : AppCompatActivity() {
             }
 
         }.execute().get()
-
 /*        return object : PadanaAsyncTask(progress_overlay) {
             override fun onPreExecute() {
                 super.onPreExecute()
@@ -132,7 +101,7 @@ class RemoteTreeActivity : AppCompatActivity() {
         try {
             SFTPUtils.createSFTPConnection(ftpClient)?.let { sftpChan ->
                 folderList.addAll(ArrayList(sftpChan.ls(path).filter { file ->
-                    !(file as ChannelSftp.LsEntry).filename.startsWith(".") && !(file as ChannelSftp.LsEntry).filename.startsWith("..")
+                    !(file as ChannelSftp.LsEntry).filename.startsWith(".") && !file.filename.startsWith("..")
                 }.map { file ->
                     var f = file as ChannelSftp.LsEntry
                     Folder(f.filename, file.attrs.isDir, path + "/" + f.filename)
@@ -210,6 +179,6 @@ class RemoteTreeActivity : AppCompatActivity() {
             this.finish()
             return
         }
-        getFileList(currentPath)
+        updateListAdapter()
     }
 }

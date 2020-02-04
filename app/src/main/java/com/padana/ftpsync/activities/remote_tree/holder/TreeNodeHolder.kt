@@ -20,7 +20,7 @@ class TreeNodeHolder(context: Context?) : TreeNode.BaseNodeViewHolder<TreeNodeHo
         val tvValue = view.findViewById<View>(R.id.node_value) as TextView
         tvValue.text = value!!.folderName
         val fileIcon = view.findViewById<View>(R.id.fileIcon) as ImageView
-        value!!.icon?.let { icon ->
+        value.icon?.let { icon ->
             fileIcon.setImageResource(icon)
         }
 

@@ -17,7 +17,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".activities.remote_tree.RemoteTreeActivity"></activity>
+        <activity
+            android:name=".activities.remote_explorer.RemoteExplorerActivity"
+            android:parentActivityName=".activities.ftp_connections.FtpConnectionsActivity"></activity>
+        <activity
+            android:name=".activities.remote_tree.RemoteTreeActivity"
+            android:parentActivityName=".activities.ftp_connections.FtpConnectionsActivity"></activity>
         <activity
             android:name=".activities.sync_data_view.ViewSyncDataActivity"
             android:label="@string/title_activity_view_sync_data"
