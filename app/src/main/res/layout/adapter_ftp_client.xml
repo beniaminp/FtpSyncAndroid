@@ -9,31 +9,36 @@
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight=".40"
-        android:text="TextView" />
+        android:gravity="center"
+        android:text="TextView"
+        android:textColor="#040404"
+        android:textSize="15dip"
+        android:textStyle="bold"
+        android:typeface="sans" />
 
     <Button
         android:id="@+id/btnFtpClientEdit"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight=".15"
-        android:drawableStart="@android:drawable/ic_menu_edit"
-        android:drawableLeft="@android:drawable/ic_menu_edit" />
+        android:drawableStart="@mipmap/edit_client"
+        android:drawableLeft="@mipmap/edit_client" />
 
     <Button
         android:id="@+id/btnFtpClientChooseFolders"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight=".15"
-        android:drawableStart="@mipmap/icons8_folder_50"
-        android:drawableLeft="@mipmap/icons8_folder_50" />
+        android:drawableStart="@mipmap/add_folder"
+        android:drawableLeft="@mipmap/add_folder" />
 
     <Button
         android:id="@+id/btnViewSyncData"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight=".15"
-        android:drawableStart="@android:drawable/ic_menu_agenda"
-        android:drawableLeft="@android:drawable/ic_menu_agenda" />
+        android:drawableStart="@mipmap/view_list"
+        android:drawableLeft="@mipmap/view_list" />
 
     <Button
         android:id="@+id/btnStartSync"
@@ -58,6 +63,6 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight=".15"
-        android:drawableStart="@android:drawable/ic_delete"
-        android:drawableLeft="@android:drawable/ic_delete" />
+        android:drawableStart="@mipmap/delete_client"
+        android:drawableLeft="@mipmap/delete_client" />
 </LinearLayout>

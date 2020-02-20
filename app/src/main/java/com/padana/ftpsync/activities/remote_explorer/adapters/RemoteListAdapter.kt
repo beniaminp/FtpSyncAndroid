@@ -33,7 +33,11 @@ class RemoteListAdapter(val mContext: Context,
         if (folder.isFolder) {
             image.setImageResource(R.mipmap.icons8_folder_50)
         } else {
-            image.setImageResource(R.mipmap.icons8_file_50)
+            if (folder.name.endsWith(".jpg")) {
+                image.setImageResource(R.mipmap.image_icon)
+            } else if (folder.name.endsWith(".mp4")) {
+                image.setImageResource(R.mipmap.video_icon)
+            }
         }
 
         val folderName = listItem.findViewById<TextView>(R.id.item_title)

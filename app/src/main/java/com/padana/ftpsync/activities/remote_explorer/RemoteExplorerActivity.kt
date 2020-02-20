@@ -5,8 +5,10 @@ import android.net.Uri
 import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
+import android.os.StrictMode
 import android.view.View
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
 import com.jcraft.jsch.ChannelSftp
@@ -26,17 +28,25 @@ import org.apache.commons.net.ftp.FTPClientConfig
 import org.apache.commons.net.ftp.FTPReply
 import java.io.File
 import java.io.FileOutputStream
+import java.lang.reflect.Method
 import java.util.*
 import kotlin.collections.ArrayList
+
 
 class RemoteExplorerActivity : AppCompatActivity() {
     private lateinit var currentPath: String
     private lateinit var ftpClient: FtpClient
     private lateinit var adapter: RemoteListAdapter
+    private lateinit var dialog: AlertDialog
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_remote_explorer)
+
+        val builder = AlertDialog.Builder(this)
+        builder.setCancelable(false); // if you want user to wait for some process to finish,
+        builder.setView(R.layout.layout_loading_dialog);
+        dialog = builder.create()
 
         var bundle = intent.extras
         ftpClient = bundle?.getSerializable("ftpClient") as FtpClient
@@ -68,17 +78,30 @@ class RemoteExplorerActivity : AppCompatActivity() {
     }
 
     private fun processVideo(file: Folder) {
+        dialog.show()
         val video = getRemoteFile(file, VIDEO_EXTENSION)
+        if (Build.VERSION.SDK_INT >= 24) {
+            try {
+                val m: Method = StrictMode::class.java.getMethod("disableDeathOnFileUriExposure")
+                m.invoke(null)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
         val intent = Intent(Intent.ACTION_VIEW, Uri.fromFile(video))
         intent.setDataAndType(Uri.fromFile(video), "video/mp4")
+        dialog.hide()
         startActivity(intent)
     }
 
     private fun processImage(position: Int) {
-        StfalconImageViewer.Builder(this, adapter.folderList.filter { folder -> folder.name.endsWith(IMAGE_EXTENSION) }) { view, image ->
+        dialog.show()
+        val salfcon = StfalconImageViewer.Builder(this, adapter.folderList.filter { folder -> folder.name.endsWith(IMAGE_EXTENSION) }) { view, image ->
             var image = getRemoteFile(image, IMAGE_EXTENSION)
             Picasso.get().load(image).into(view)
-        }.show().setCurrentPosition(position)
+        }
+        dialog.hide()
+        salfcon.show().setCurrentPosition(position)
     }
 
     private fun updateListAdapter(path: String) {
@@ -92,8 +115,7 @@ class RemoteExplorerActivity : AppCompatActivity() {
 
         return object : AsyncTask<Void, Void, ArrayList<Folder>?>() {
             override fun onPreExecute() {
-                super.onPreExecute()
-                // progress_overlay.visibility = View.VISIBLE
+                dialog.show()
             }
 
             override fun doInBackground(vararg params: Void?): ArrayList<Folder>? {
@@ -109,33 +131,10 @@ class RemoteExplorerActivity : AppCompatActivity() {
             }
 
             override fun onPostExecute(result: ArrayList<Folder>?) {
-                super.onPostExecute(result)
-                // progress_overlay.visibility = View.INVISIBLE
+                dialog.dismiss()
             }
 
         }.execute().get()
-/*        return object : PadanaAsyncTask(progress_overlay) {
-            override fun onPreExecute() {
-                super.onPreExecute()
-                showProgress()
-            }
-
-            override fun doInBackground(vararg voids: Any): Any? {
-                val folderList = ArrayList<Folder>()
-                if (ftpClient.connectionType!!.toLowerCase() == ConnTypes.SFTP) {
-                    folderList.addAll(listSftpFiles(path))
-
-                } else if (ftpClient.connectionType!!.toLowerCase() == ConnTypes.FTP) {
-                    folderList.addAll(listFtpFile(path))
-                }
-
-                return folderList
-            }
-
-            override fun onPostExecute(folderList: Any?) {
-                dismissProgress()
-            }
-        }.execute().get()*/
     }
 
     private fun listSftpFiles(path: String): ArrayList<Folder> {
@@ -196,7 +195,7 @@ class RemoteExplorerActivity : AppCompatActivity() {
                 var byteArray: ByteArray?
                 var file = File("")
                 SFTPUtils.createSFTPConnection(ftpClient)?.let { sftpChan ->
-                    var outputFile = File.createTempFile("prefix", fileExtension, applicationContext.cacheDir)
+                    var outputFile = File.createTempFile("prefix", fileExtension, applicationContext.externalCacheDir)
                     byteArray = sftpChan.get(folder.path).readBytes()
                     var fos = FileOutputStream(outputFile)
                     fos.write(byteArray)

@@ -6,10 +6,10 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.facebook.*
 import com.facebook.login.LoginResult
-import com.google.android.material.snackbar.Snackbar
 import com.padana.ftpsync.MyApp
 import com.padana.ftpsync.R
 import com.padana.ftpsync.activities.ftp_connections.FtpConnectionsActivity
+import com.padana.ftpsync.services.utils.LogerFileUtils
 import kotlinx.android.synthetic.main.activity_login.*
 import kotlinx.android.synthetic.main.content_login.*
 import org.json.JSONException
@@ -23,9 +23,20 @@ class LoginActivity : AppCompatActivity() {
         setContentView(R.layout.activity_login)
         setSupportActionBar(toolbar)
 
+        /*  val info = packageManager.getPackageInfo(
+                  "com.padana.ftpsync",
+                  PackageManager.GET_SIGNATURES)
+          for (signature in info.signatures) {
+              val md: MessageDigest = MessageDigest.getInstance("SHA")
+              md.update(signature.toByteArray())
+              System.err.println("KeyHash:   " + Base64.encodeToString(md.digest(), Base64.DEFAULT))
+          }*/
+
         val loggedOut = AccessToken.getCurrentAccessToken() == null
         if (!loggedOut) {
             getUserProfile(AccessToken.getCurrentAccessToken())
+            val intent = Intent(MyApp.getCtx(), FtpConnectionsActivity::class.java)
+            startActivity(intent)
         }
 
         login_button.setPermissions(listOf("email", "public_profile"))
@@ -43,14 +54,10 @@ class LoginActivity : AppCompatActivity() {
             override fun onCancel() { // App code
             }
 
-            override fun onError(exception: FacebookException) { // App code
+            override fun onError(exception: FacebookException) {
+                LogerFileUtils.error(exception.message!!)
             }
         })
-
-        fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).show()
-        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
