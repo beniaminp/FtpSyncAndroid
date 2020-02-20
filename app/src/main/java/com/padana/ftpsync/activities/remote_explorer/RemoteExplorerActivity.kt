@@ -60,7 +60,7 @@ class RemoteExplorerActivity : AppCompatActivity() {
                 var file = adapter.folderList[position]
                 if (file.name.endsWith(IMAGE_EXTENSION)) {
                     processImage(position)
-                } else if (file.name.endsWith(".mp4")) {
+                } else if (file.name.endsWith(VIDEO_EXTENSION)) {
                     processVideo(file)
                 }
             }
@@ -68,15 +68,15 @@ class RemoteExplorerActivity : AppCompatActivity() {
     }
 
     private fun processVideo(file: Folder) {
-        val video = getFileBytes(file, VIDEO_EXTENSION)
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("file:/" + video.path))
-        intent.setDataAndType(Uri.parse("file:/" + video.path), "video/mp4")
+        val video = getRemoteFile(file, VIDEO_EXTENSION)
+        val intent = Intent(Intent.ACTION_VIEW, Uri.fromFile(video))
+        intent.setDataAndType(Uri.fromFile(video), "video/mp4")
         startActivity(intent)
     }
 
     private fun processImage(position: Int) {
-        StfalconImageViewer.Builder<Folder>(this, adapter.folderList.filter { folder -> folder.name.endsWith(IMAGE_EXTENSION) }) { view, image ->
-            var image = getFileBytes(image, IMAGE_EXTENSION)
+        StfalconImageViewer.Builder(this, adapter.folderList.filter { folder -> folder.name.endsWith(IMAGE_EXTENSION) }) { view, image ->
+            var image = getRemoteFile(image, IMAGE_EXTENSION)
             Picasso.get().load(image).into(view)
         }.show().setCurrentPosition(position)
     }
@@ -145,7 +145,7 @@ class RemoteExplorerActivity : AppCompatActivity() {
                 folderList.addAll(ArrayList(sftpChan.ls(path).filter { file ->
                     !(file as ChannelSftp.LsEntry).filename.startsWith(".") && !file.filename.startsWith("..")
                 }.map { file ->
-                    var f = file as ChannelSftp.LsEntry
+                    val f = file as ChannelSftp.LsEntry
                     Folder(f.filename, file.attrs.isDir, path + "/" + f.filename)
                 }))
 
@@ -190,10 +190,10 @@ class RemoteExplorerActivity : AppCompatActivity() {
         return folderList
     }
 
-    private fun getFileBytes(folder: Folder, fileExtension: String): File {
+    private fun getRemoteFile(folder: Folder, fileExtension: String): File {
         return object : AsyncTask<Void, Void, File>() {
             override fun doInBackground(vararg params: Void?): File {
-                var byteArray: ByteArray? = null
+                var byteArray: ByteArray?
                 var file = File("")
                 SFTPUtils.createSFTPConnection(ftpClient)?.let { sftpChan ->
                     var outputFile = File.createTempFile("prefix", fileExtension, applicationContext.cacheDir)

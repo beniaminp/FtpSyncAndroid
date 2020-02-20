@@ -18,11 +18,20 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
+            android:name=".activities.LoginActivity"
+            android:label="@string/title_activity_login"
+            android:theme="@style/AppTheme.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".activities.remote_explorer.RemoteExplorerActivity"
-            android:parentActivityName=".activities.ftp_connections.FtpConnectionsActivity"></activity>
+            android:parentActivityName=".activities.ftp_connections.FtpConnectionsActivity" />
         <activity
             android:name=".activities.remote_tree.RemoteTreeActivity"
-            android:parentActivityName=".activities.ftp_connections.FtpConnectionsActivity"></activity>
+            android:parentActivityName=".activities.ftp_connections.FtpConnectionsActivity" />
         <activity
             android:name=".activities.sync_data_view.ViewSyncDataActivity"
             android:label="@string/title_activity_view_sync_data"
@@ -54,13 +63,7 @@
         <activity
             android:name=".activities.ftp_connections.FtpConnectionsActivity"
             android:label="@string/app_name"
-            android:theme="@style/AppTheme.NoActionBar">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:theme="@style/AppTheme.NoActionBar"></activity>
         <activity
             android:name=".activities.ftp_connections.AddFtpConnectionActivity"
             android:label="@string/title_activity_add_ftp_conenctino"
@@ -74,6 +77,28 @@
             android:name=".activities.local_explorer.LocalExplorerActivity"
             android:label="@string/app_name"
             android:theme="@style/AppTheme.NoActionBar" />
+
+        <meta-data
+            android:name="com.facebook.sdk.ApplicationId"
+            android:value="@string/facebook_app_id" />
+
+        <activity
+            android:name="com.facebook.FacebookActivity"
+            android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"
+            android:label="@string/app_name" />
+        <activity
+            android:name="com.facebook.CustomTabActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="@string/fb_login_protocol_scheme" />
+            </intent-filter>
+        </activity>
+
     </application>
 
 </manifest>
