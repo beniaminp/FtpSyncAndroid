@@ -1,5 +1,7 @@
 package com.padana.ftpsync.activities.remote_explorer
 
+import android.content.Intent
+import android.net.Uri
 import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
@@ -47,20 +49,36 @@ class RemoteExplorerActivity : AppCompatActivity() {
         setOnClickListenerListAdapter()
     }
 
+    private val IMAGE_EXTENSION = ".jpg"
+    private val VIDEO_EXTENSION = ".mp4"
+
     private fun setOnClickListenerListAdapter() {
         remote_list.setOnItemClickListener { parent, view, position, id ->
             if (adapter.folderList[position].isFolder) {
                 updateListAdapter(adapter.folderList[position].path)
             } else if (!adapter.folderList[position].isFolder) {
                 var file = adapter.folderList[position]
-                if (file.name.endsWith(".jpg")) {
-                    StfalconImageViewer.Builder<Folder>(this, adapter.folderList.filter { folder -> folder.name.endsWith(".jpg") }) { view, image ->
-                        var image = getFileBytes(image)
-                        Picasso.get().load(image).into(view)
-                    }.show().setCurrentPosition(position)
+                if (file.name.endsWith(IMAGE_EXTENSION)) {
+                    processImage(position)
+                } else if (file.name.endsWith(".mp4")) {
+                    processVideo(file)
                 }
             }
         }
+    }
+
+    private fun processVideo(file: Folder) {
+        val video = getFileBytes(file, VIDEO_EXTENSION)
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("file:/" + video.path))
+        intent.setDataAndType(Uri.parse("file:/" + video.path), "video/mp4")
+        startActivity(intent)
+    }
+
+    private fun processImage(position: Int) {
+        StfalconImageViewer.Builder<Folder>(this, adapter.folderList.filter { folder -> folder.name.endsWith(IMAGE_EXTENSION) }) { view, image ->
+            var image = getFileBytes(image, IMAGE_EXTENSION)
+            Picasso.get().load(image).into(view)
+        }.show().setCurrentPosition(position)
     }
 
     private fun updateListAdapter(path: String) {
@@ -172,14 +190,14 @@ class RemoteExplorerActivity : AppCompatActivity() {
         return folderList
     }
 
-    private fun getFileBytes(folder: Folder): File {
+    private fun getFileBytes(folder: Folder, fileExtension: String): File {
         return object : AsyncTask<Void, Void, File>() {
             override fun doInBackground(vararg params: Void?): File {
                 var byteArray: ByteArray? = null
                 var file = File("")
                 SFTPUtils.createSFTPConnection(ftpClient)?.let { sftpChan ->
+                    var outputFile = File.createTempFile("prefix", fileExtension, applicationContext.cacheDir)
                     byteArray = sftpChan.get(folder.path).readBytes()
-                    var outputFile = File.createTempFile("prefix", ".jpg", applicationContext.cacheDir)
                     var fos = FileOutputStream(outputFile)
                     fos.write(byteArray)
                     file = outputFile
