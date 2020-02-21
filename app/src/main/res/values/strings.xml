@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">FTP SYNC</string>
+    <string name="app_name">File Sync</string>
     <string name="action_settings">Settings</string>
     <string name="title_activity_add_ftp_conenctino">Add FTP Connection</string>
     <string name="add_ftp_client">Add FTP Client</string>
@@ -34,5 +34,5 @@
     </string-array>
     <string name="facebook_app_id">2590702947831988</string>
     <string name="fb_login_protocol_scheme">fb2590702947831988</string>
-    <string name="title_activity_login">LoginActivity</string>
+    <string name="title_activity_login">File Sync</string>
 </resources>

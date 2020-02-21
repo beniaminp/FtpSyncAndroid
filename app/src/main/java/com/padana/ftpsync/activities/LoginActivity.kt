@@ -1,9 +1,13 @@
 package com.padana.ftpsync.activities
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.facebook.*
 import com.facebook.login.LoginResult
 import com.padana.ftpsync.MyApp
@@ -31,7 +35,7 @@ class LoginActivity : AppCompatActivity() {
               md.update(signature.toByteArray())
               System.err.println("KeyHash:   " + Base64.encodeToString(md.digest(), Base64.DEFAULT))
           }*/
-
+        askPermissions()
         val loggedOut = AccessToken.getCurrentAccessToken() == null
         if (!loggedOut) {
             getUserProfile(AccessToken.getCurrentAccessToken())
@@ -83,6 +87,33 @@ class LoginActivity : AppCompatActivity() {
         parameters.putString("fields", "first_name,last_name,email,id")
         request.parameters = parameters
         request.executeAsync()
+    }
+
+    private fun askPermissions() {
+        // Here, thisActivity is the current activity
+        if (ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            // Permission is not granted
+            // Should we show an explanation?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                // Show an explanation to the user *asynchronously* -- don't block
+                // this thread waiting for the user's response! After the user
+                // sees the explanation, try again to request the permission.
+            } else {
+                // No explanation needed, we can request the permission.
+                ActivityCompat.requestPermissions(this,
+                        arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 1)
+
+                // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                // app-defined int constant. The callback method gets the
+                // result of the request.
+            }
+        } else {
+            // Permission has already been granted
+        }
     }
 
 }

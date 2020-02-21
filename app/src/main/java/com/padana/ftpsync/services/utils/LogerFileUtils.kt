@@ -1,5 +1,6 @@
 package com.padana.ftpsync.services.utils
 
+import android.util.Log
 import java.io.File
 import java.io.FileWriter
 import java.io.PrintWriter
@@ -14,16 +15,20 @@ object LogerFileUtils {
     private val loggerName = "logger_" + dateString + ".txt"
 
     fun error(logString: String) {
-        val file = File(dirName, loggerName)
-        if (!file.exists()) {
-            File(dirName).mkdirs()
-            file.createNewFile()
-        }
-        val fileWriter = FileWriter(file, true) //Set true for append mode
+        try {
+            val file = File(dirName, loggerName)
+            if (!file.exists()) {
+                File(dirName).mkdirs()
+                file.createNewFile()
+            }
+            val fileWriter = FileWriter(file, true) //Set true for append mode
 
-        val printWriter = PrintWriter(fileWriter)
-        printWriter.println("ERROR --- " + Date().toString() + " --- " + logString)
-        printWriter.close()
+            val printWriter = PrintWriter(fileWriter)
+            printWriter.println("ERROR --- " + Date().toString() + " --- " + logString)
+            printWriter.close()
+        } catch (e: Exception) {
+            Log.e("file_error", e.message)
+        }
     }
 
     fun info(logString: String) {

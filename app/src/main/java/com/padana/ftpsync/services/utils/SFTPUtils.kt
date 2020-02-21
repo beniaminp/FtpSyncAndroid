@@ -7,6 +7,8 @@ import com.jcraft.jsch.Session
 import com.jcraft.jsch.SftpException
 import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.entities.SyncData
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
@@ -45,12 +47,10 @@ object SFTPUtils {
         }.execute().get()
     }
 
-    fun listFiles(sftp: ChannelSftp, syncData: SyncData): Vector<*>? {
-        return object : AsyncTask<Void, Void, Vector<*>?>() {
-            override fun doInBackground(vararg voids: Void): Vector<*>? {
-                return sftp.ls(syncData.serverPath)
-            }
-        }.execute().get()
+    suspend fun listFiles(sftp: ChannelSftp, syncData: SyncData): Vector<*>? {
+        return withContext(Dispatchers.IO) {
+            sftp.ls(syncData.serverPath)
+        }
     }
 
     fun listFilesByPath(sftp: ChannelSftp, path: String): Vector<*>? {
@@ -61,73 +61,69 @@ object SFTPUtils {
         }.execute().get()
     }
 
-    fun checkDirectoryExists(sftp: ChannelSftp, dirPath: String): Boolean {
-        return object : AsyncTask<Void, Void, Boolean>() {
-            override fun doInBackground(vararg voids: Void): Boolean {
-                try {
-                    if (sftp.stat(dirPath) != null) {
-                        return true
-                    }
-                    return false
-                } catch (e: Exception) {
-                    LogerFileUtils.error(e.message!!)
-                    e.printStackTrace()
-
-                    return false
+    suspend fun checkDirectoryExists(sftp: ChannelSftp, dirPath: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                if (sftp.stat(dirPath) != null) {
+                    true
                 }
-            }
-        }.execute().get()
-    }
+                false
+            } catch (e: Exception) {
+                LogerFileUtils.error(e.message!!)
+                e.printStackTrace()
 
-    fun remoteFileExists(localFile: File, remoteFiles: Vector<ChannelSftp.LsEntry>): Boolean {
-        return object : AsyncTask<Void, Void, Boolean>() {
-            override fun doInBackground(vararg voids: Void): Boolean {
-                remoteFiles.forEach { remoteFile ->
-                    if (remoteFile.filename == localFile.name) {
-                        return true
-                    }
-                }
-                return false
-            }
-        }.execute().get()
-
-    }
-
-    fun storeFileOnRemote(localFile: File, sftp: ChannelSftp, syncData: SyncData): Boolean? {
-        return object : AsyncTask<Void, Void, Boolean>() {
-            override fun doInBackground(vararg voids: Void?): Boolean? {
-                val bis = BufferedInputStream(FileInputStream(localFile))
-                try {
-                    sftp.put(localFile.absolutePath, syncData.serverPath + "/" + localFile.name)
-                } catch (e: SftpException) {
-                    LogerFileUtils.error(e.message!! + " => " + localFile.name)
-                    return false
-                }
-                bis.close()
-                return true
-            }
-        }.execute().get()
-    }
-
-    fun makeDirectories(sftp: ChannelSftp, dirPath: String): Boolean {
-        val pathElements = dirPath.split("/").toTypedArray()
-        var partialPath = ""
-
-        if (pathElements != null && pathElements.isNotEmpty()) {
-            for (singleDir in pathElements) {
-                if (singleDir == "") {
-                    partialPath += "/"
-                    continue
-                }
-                partialPath += singleDir
-                val existed: Boolean = checkDirectoryExists(sftp, partialPath)
-                if (!existed) {
-                    sftp.mkdir(partialPath)
-                }
-                partialPath += "/"
+                false
             }
         }
-        return true
+    }
+
+    suspend fun remoteFileExists(localFile: File, remoteFiles: Vector<ChannelSftp.LsEntry>): Boolean {
+        return withContext(Dispatchers.IO) {
+            remoteFiles.forEach { remoteFile ->
+                if (remoteFile.filename == localFile.name) {
+                    true
+                }
+            }
+            false
+        }
+
+    }
+
+    suspend fun storeFileOnRemote(localFile: File, sftp: ChannelSftp, syncData: SyncData): Boolean? {
+        return withContext(Dispatchers.IO) {
+            val bis = BufferedInputStream(FileInputStream(localFile))
+            try {
+                sftp.put(localFile.absolutePath, syncData.serverPath + "/" + localFile.name)
+            } catch (e: SftpException) {
+                LogerFileUtils.error(e.message!! + " => " + localFile.name)
+                false
+            }
+            bis.close()
+            true
+        }
+    }
+
+    suspend fun makeDirectories(sftp: ChannelSftp, dirPath: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            val pathElements = dirPath.split("/").toTypedArray()
+            var partialPath = ""
+
+            if (pathElements != null && pathElements.isNotEmpty()) {
+                for (singleDir in pathElements) {
+                    if (singleDir == "") {
+                        partialPath += "/"
+                        continue
+                    }
+                    partialPath += singleDir
+                    val existed: Boolean = checkDirectoryExists(sftp, partialPath)
+                    if (!existed) {
+                        sftp.mkdir(partialPath)
+                    }
+                    partialPath += "/"
+                }
+            }
+            true
+        }
     }
 
 /*    class SFTPProgressMonitor : SftpProgressMonitor {
