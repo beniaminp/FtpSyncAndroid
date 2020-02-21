@@ -49,7 +49,7 @@ object SFTPUtils {
 
     suspend fun listFiles(sftp: ChannelSftp, syncData: SyncData): Vector<*>? {
         return withContext(Dispatchers.IO) {
-            sftp.ls(syncData.serverPath)
+            return@withContext sftp.ls(syncData.serverPath)
         }
     }
 
@@ -65,14 +65,14 @@ object SFTPUtils {
         return withContext(Dispatchers.IO) {
             try {
                 if (sftp.stat(dirPath) != null) {
-                    true
+                    return@withContext true
                 }
-                false
+                return@withContext false
             } catch (e: Exception) {
                 LogerFileUtils.error(e.message!!)
                 e.printStackTrace()
 
-                false
+                return@withContext false
             }
         }
     }
@@ -81,10 +81,10 @@ object SFTPUtils {
         return withContext(Dispatchers.IO) {
             remoteFiles.forEach { remoteFile ->
                 if (remoteFile.filename == localFile.name) {
-                    true
+                    return@withContext true
                 }
             }
-            false
+            return@withContext false
         }
 
     }
@@ -96,10 +96,10 @@ object SFTPUtils {
                 sftp.put(localFile.absolutePath, syncData.serverPath + "/" + localFile.name)
             } catch (e: SftpException) {
                 LogerFileUtils.error(e.message!! + " => " + localFile.name)
-                false
+                return@withContext false
             }
             bis.close()
-            true
+            return@withContext true
         }
     }
 
@@ -122,7 +122,7 @@ object SFTPUtils {
                     partialPath += "/"
                 }
             }
-            true
+            return@withContext true
         }
     }
 

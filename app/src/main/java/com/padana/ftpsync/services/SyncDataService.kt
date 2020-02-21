@@ -208,19 +208,19 @@ class SyncDataService : Service() {
 
     private suspend fun computeFilesSFTP(sftp: Any?, syncData: SyncData): MutableList<StoreFiles> {
         return withContext(Dispatchers.IO) {
-            var directoryExists = SFTPUtils.checkDirectoryExists(sftp as ChannelSftp, syncData.serverPath!!)
+            val directoryExists = SFTPUtils.checkDirectoryExists(sftp as ChannelSftp, syncData.serverPath!!)
             if (!directoryExists) {
                 SFTPUtils.makeDirectories(sftp, syncData.serverPath!!)
             }
 
-            var remoteFiles: Vector<*>? = SFTPUtils.listFiles(sftp, syncData)
+            val remoteFiles: Vector<*>? = SFTPUtils.listFiles(sftp, syncData)
             if (syncData.localPath == null) {
                 throw RuntimeException("Path is null!")
             }
 
             val storeFilesList: MutableList<StoreFiles> = mutableListOf()
 
-            var localFiles: Array<File>? = File(syncData.localPath).listFiles()
+            val localFiles: Array<File>? = File(syncData.localPath).listFiles()
             if (localFiles != null && remoteFiles!!.size != localFiles.size) {
                 localFiles.forEach { localFile ->
                     if (!SFTPUtils.remoteFileExists(localFile, remoteFiles as Vector<ChannelSftp.LsEntry>)) {
@@ -238,19 +238,19 @@ class SyncDataService : Service() {
             /*storeFilesList.forEach { storeFile ->
             SFTPUtils.storeFileOnRemote(storeFile.localFile, sftp, storeFile.syncData)
         }*/
-            storeFilesList
+            return@withContext storeFilesList
         }
     }
 
     private suspend fun listRemoteFiles(ftp: FTPClient, syncData: SyncData): Array<FTPFile> {
         return withContext(Dispatchers.IO) {
-            ftp.listFiles(syncData.serverPath)
+            return@withContext ftp.listFiles(syncData.serverPath)
         }
     }
 
     private suspend fun makeDirectory(ftp: FTPClient, syncData: SyncData): Boolean {
         return withContext(Dispatchers.IO) {
-            ftp.makeDirectory(syncData.serverPath)
+            return@withContext ftp.makeDirectory(syncData.serverPath)
         }
     }
 
@@ -264,19 +264,19 @@ class SyncDataService : Service() {
 
     private suspend fun checkDirectoryExists(ftp: FTPClient, syncData: SyncData): Boolean {
         return withContext(Dispatchers.IO) {
-            ftp.changeWorkingDirectory(syncData.serverPath)
+            return@withContext ftp.changeWorkingDirectory(syncData.serverPath)
         }
     }
 
     private suspend fun loadAllSyncData(): Array<SyncData>? {
         return withContext(Dispatchers.IO) {
-            DatabaseClient(applicationContext).getAppDatabase().genericDAO.loadAllSyncData()
+            return@withContext DatabaseClient(applicationContext).getAppDatabase().genericDAO.loadAllSyncData()
         }
     }
 
     private suspend fun loadAllFtpClients(): Array<FtpClient>? {
         return withContext(Dispatchers.IO) {
-            DatabaseClient(applicationContext).getAppDatabase().genericDAO.loadAllFtpClients()
+            return@withContext DatabaseClient(applicationContext).getAppDatabase().genericDAO.loadAllFtpClients()
         }
     }
 
@@ -307,14 +307,14 @@ class SyncDataService : Service() {
                 System.err.println("Could not connect to server...")
             }
 
-            ftp
+            return@withContext ftp
         }
     }
 
     private suspend fun createSFTPConnection(ftpClient: FtpClient): ChannelSftp? {
         return withContext(Dispatchers.IO) {
             try {
-                SFTPUtils.createSFTPConnection(ftpClient)
+                return@withContext SFTPUtils.createSFTPConnection(ftpClient)
             } catch (e: Exception) {
                 e.printStackTrace()
 
@@ -322,7 +322,7 @@ class SyncDataService : Service() {
 
                 startForeground(NOTIFICATION_ID, NotifUtils.getNotification("Conenction error...", "Server " + ftpClient.hostName + " " + e.message!!))
                 System.err.println("Could not connect to server...")
-                null
+                return@withContext null
             }
         }
     }
@@ -335,10 +335,10 @@ class SyncDataService : Service() {
         return withContext(Dispatchers.IO) {
             remoteFiles.forEach { remoteFile ->
                 if (remoteFile.name == localFile.name) {
-                    true
+                    return@withContext true
                 }
             }
-            false
+            return@withContext false
         }
 
     }

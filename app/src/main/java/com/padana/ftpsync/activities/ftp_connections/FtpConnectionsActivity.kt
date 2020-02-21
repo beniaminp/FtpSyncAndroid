@@ -1,16 +1,21 @@
 package com.padana.ftpsync.activities.ftp_connections
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
 import android.provider.DocumentsContract
+import android.util.Log
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.padana.ftpsync.R
 import com.padana.ftpsync.activities.local_explorer.LocalExplorerActivity
 import com.padana.ftpsync.activities.remote_explorer.RemoteExplorerActivity
@@ -33,10 +38,13 @@ class FtpConnectionsActivity : AppCompatActivity() {
     lateinit var genericDAO: GenericDAO
     lateinit var syncDataServiceIntent: Intent
     var selectedFtpClient: FtpClient? = null
+    private val RECORD_REQUEST_CODE = 101
+    private val TAG = "PermissionDemo"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_ftp_connections)
+        setupPermissions()
 
         genericDAO = DatabaseClient(applicationContext).getAppDatabase().genericDAO
 
@@ -62,6 +70,7 @@ class FtpConnectionsActivity : AppCompatActivity() {
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == 9999) {
             if (data != null && data.data != null) {
                 val uri: Uri = data.data!!
@@ -214,6 +223,23 @@ class FtpConnectionsActivity : AppCompatActivity() {
         }.execute()
     }
 
+    private fun setupPermissions() {
+        val permission = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.READ_EXTERNAL_STORAGE)
+        makeRequest()
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            Log.i(TAG, "Permission to record denied")
+            makeRequest()
+        }
+    }
+
+    private fun makeRequest() {
+        ActivityCompat.requestPermissions(this,
+                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                RECORD_REQUEST_CODE)
+    }
+
+
     override fun onBackPressed() {
         moveTaskToBack(true)
     }
@@ -236,6 +262,21 @@ class FtpConnectionsActivity : AppCompatActivity() {
                 true
             }
             else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int,
+                                            permissions: Array<String>, grantResults: IntArray) {
+        when (requestCode) {
+            RECORD_REQUEST_CODE -> {
+
+                if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+
+                    Log.i(TAG, "Permission has been denied by user")
+                } else {
+                    Log.i(TAG, "Permission has been granted by user")
+                }
+            }
         }
     }
 
