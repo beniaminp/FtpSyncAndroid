@@ -16,7 +16,7 @@ import java.util.*
 
 object SFTPUtils {
     fun createSFTPConnection(ftpClient: FtpClient): ChannelSftp? {
-        var sftpChannel: ChannelSftp
+        val sftpChannel: ChannelSftp
         val jsch = JSch()
 
         val config = Properties()
