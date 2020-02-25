@@ -69,6 +69,7 @@ class RemoteExplorerActivity : AppCompatActivity() {
 
     private val IMAGE_EXTENSION = ".jpg"
     private val VIDEO_EXTENSION = ".mp4"
+    private val TXT_EXTENSION = ".txt"
 
     private fun setOnClickListenerListAdapter() {
         dialog.show()
