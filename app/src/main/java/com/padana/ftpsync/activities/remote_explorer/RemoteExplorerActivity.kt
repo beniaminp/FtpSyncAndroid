@@ -5,6 +5,9 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.StrictMode
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
@@ -32,6 +35,7 @@ import org.apache.commons.net.ftp.FTPReply
 import java.io.File
 import java.io.FileOutputStream
 import java.lang.reflect.Method
+import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -65,6 +69,26 @@ class RemoteExplorerActivity : AppCompatActivity() {
         }
 
         setOnClickListenerListAdapter()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        val inflater: MenuInflater = menuInflater
+        inflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        // Handle item selection
+        return when (item.itemId) {
+            R.id.exit -> {
+                android.os.Process.killProcess(android.os.Process.myPid())
+                true
+            }
+            R.id.help -> {
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     private val IMAGE_EXTENSION = ".jpg"
@@ -153,7 +177,15 @@ class RemoteExplorerActivity : AppCompatActivity() {
                     !(file as ChannelSftp.LsEntry).filename.startsWith(".") && !file.filename.startsWith("..")
                 }.map { file ->
                     val f = file as ChannelSftp.LsEntry
-                    Folder(f.filename, file.attrs.isDir, path + "/" + f.filename)
+                    val folder = Folder(f.filename, file.attrs.isDir, path + "/" + f.filename)
+                    if (!file.attrs.isDir) {
+                        folder.size = (f.attrs.size / 1024).toString() + " KB"
+                    }
+                    val date = Date(f.attrs.mTime * 1000L)
+                    val sdf = SimpleDateFormat("dd/mm/yyyy")
+                    folder.lastModifiedDate = sdf.format(date)
+
+                    folder
                 }))
 
                 sftpChan.disconnect()

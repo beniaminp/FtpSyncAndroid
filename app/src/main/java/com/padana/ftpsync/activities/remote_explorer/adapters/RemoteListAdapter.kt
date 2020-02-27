@@ -43,6 +43,9 @@ class RemoteListAdapter(val mContext: Context,
         val folderName = listItem.findViewById<TextView>(R.id.item_title)
         folderName.text = folder.name
 
+        val itemDetail = listItem.findViewById<TextView>(R.id.item_details)
+        itemDetail.text = folder.size + " \n " + folder.lastModifiedDate
+
         return listItem
     }
 

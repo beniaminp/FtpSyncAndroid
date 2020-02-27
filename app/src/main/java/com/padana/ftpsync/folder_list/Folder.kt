@@ -7,6 +7,8 @@ class Folder : Serializable {
     var isFolder: Boolean = false
     var path: String
     var isSync: Boolean = false
+    var size: String = "0"
+    var lastModifiedDate: String = "dd/mm/yyyy"
 
     constructor(name: String, isFolder: Boolean, path: String) {
         this.name = name
