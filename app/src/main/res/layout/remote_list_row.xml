@@ -4,59 +4,30 @@
     android:layout_height="wrap_content"
     android:padding="5dip">
 
-    <!--    <LinearLayout
-            android:id="@+id/thumbnail"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_alignParentLeft="true"
-            android:layout_marginRight="5dip"
-            android:layout_weight="0.2"
-            android:padding="3dip">
+    <LinearLayout
+        android:id="@+id/thumbnail"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_marginRight="5dip"
+        android:layout_weight="0.2"
+        android:padding="3dip">
 
-            <ImageView
-                android:id="@+id/list_image"
-                android:layout_width="match_parent"
-                android:layout_height="50dip" />
+        <ImageView
+            android:id="@+id/list_image"
+            android:layout_width="match_parent"
+            android:layout_height="50dip" />
 
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/item_title"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_alignTop="@+id/thumbnail"
-            android:layout_toRightOf="@+id/thumbnail"
-            android:layout_weight="0.6"
-            android:gravity="center"
-            android:textColor="#040404"
-            android:textSize="15dip"
-            android:textStyle="bold"
-            android:typeface="sans" />
-
-        <TextView
-            android:id="@+id/item_details"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_alignTop="@+id/item_title"
-            android:layout_gravity="end"
-            android:layout_toRightOf="@+id/item_title"
-            android:layout_weight="0.2"
-            android:gravity="start"
-            android:maxLines="10"
-            android:textColor="#040404"
-            android:textSize="5dip"
-            android:textStyle="bold"
-            android:typeface="sans" />-->
-    <ImageView
-        android:id="@+id/list_image"
-        android:layout_width="69dp"
-        android:layout_height="50dip" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/item_title"
-        android:layout_width="254dp"
+        android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:textAlignment="center"
+        android:layout_alignTop="@+id/thumbnail"
+        android:layout_toRightOf="@+id/thumbnail"
+        android:layout_weight="0.6"
+        android:gravity="center"
         android:textColor="#040404"
         android:textSize="15dip"
         android:textStyle="bold"
@@ -64,8 +35,13 @@
 
     <TextView
         android:id="@+id/item_details"
-        android:layout_width="72dp"
+        android:layout_width="0dp"
         android:layout_height="match_parent"
+        android:layout_alignTop="@+id/item_title"
+        android:layout_gravity="end"
+        android:layout_toRightOf="@+id/item_title"
+        android:layout_weight="0.2"
+        android:gravity="start"
         android:maxLines="10"
         android:textColor="#040404"
         android:textSize="5dip"
