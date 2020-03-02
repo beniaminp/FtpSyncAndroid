@@ -65,4 +65,12 @@
         android:layout_weight=".15"
         android:drawableStart="@mipmap/delete_client"
         android:drawableLeft="@mipmap/delete_client" />
+
+    <Button
+        android:id="@+id/btnSimpleView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".15"
+        android:drawableStart="@mipmap/image_icon"
+        android:drawableLeft="@mipmap/image_icon" />
 </LinearLayout>

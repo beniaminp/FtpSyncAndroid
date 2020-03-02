@@ -28,6 +28,7 @@ import com.padana.ftpsync.entities.SyncData
 import com.padana.ftpsync.interfaces.BtnClickListener
 import com.padana.ftpsync.services.SyncDataService
 import com.padana.ftpsync.shared.PadanaAsyncTask
+import com.padana.ftpsync.simple.activities.GalleryActivity
 import com.padana.ftpsync.utils.FileHelpers
 import kotlinx.android.synthetic.main.activity_ftp_connections.*
 import kotlinx.android.synthetic.main.content_ftp_connections.*
@@ -150,6 +151,11 @@ class FtpConnectionsActivity : AppCompatActivity() {
                     override fun onBtnClick(position: Int) {
                         goToSyncDataView(ftpClientList[position])
                     }
+                },
+                object : BtnClickListener {
+                    override fun onBtnClick(position: Int) {
+                        btnSimpleView(ftpClientList[position])
+                    }
                 }
         )
     }
@@ -163,6 +169,13 @@ class FtpConnectionsActivity : AppCompatActivity() {
     private fun goToFtpExplorer(ftpClient: FtpClient) {
         // val intent = Intent(this, FtpExplorerActivity::class.java)
         val intent = Intent(this, RemoteExplorerActivity::class.java)
+        intent.putExtra("ftpClient", ftpClient)
+        startActivity(intent)
+    }
+
+    private fun btnSimpleView(ftpClient: FtpClient) {
+        // val intent = Intent(this, FtpExplorerActivity::class.java)
+        val intent = Intent(this, GalleryActivity::class.java)
         intent.putExtra("ftpClient", ftpClient)
         startActivity(intent)
     }

@@ -19,7 +19,8 @@ class FtpConnectionsListAdapter(mContext: Context,
                                 syncClickListener: BtnClickListener,
                                 startSyncClickListener: BtnClickListener,
                                 chooseFolderSync: BtnClickListener,
-                                viewSyncData: BtnClickListener) : ArrayAdapter<FtpClient>(mContext, resource, ftpClientsList) {
+                                viewSyncData: BtnClickListener,
+                                btnSimpleView: BtnClickListener) : ArrayAdapter<FtpClient>(mContext, resource, ftpClientsList) {
 
     var mContext: Context = mContext
     var ftpClientsList = ftpClientsList
@@ -30,6 +31,7 @@ class FtpConnectionsListAdapter(mContext: Context,
     val startSyncClickListener = startSyncClickListener
     val chooseFolderSync = chooseFolderSync
     val viewSyncData = viewSyncData
+    val btnSimpleView = btnSimpleView
 
     override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
 
@@ -55,6 +57,7 @@ class FtpConnectionsListAdapter(mContext: Context,
         listItem.findViewById<TextView>(R.id.btnStartSync).setOnClickListener { startSyncClickListener.onBtnClick(position) }
         listItem.findViewById<TextView>(R.id.btnFtpClientChooseFolders).setOnClickListener { chooseFolderSync.onBtnClick(position) }
         listItem.findViewById<TextView>(R.id.btnViewSyncData).setOnClickListener { viewSyncData.onBtnClick(position) }
+        listItem.findViewById<TextView>(R.id.btnSimpleView).setOnClickListener { btnSimpleView.onBtnClick(position) }
 
 
         return listItem

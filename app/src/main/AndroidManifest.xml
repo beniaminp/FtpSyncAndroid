@@ -19,12 +19,14 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <activity android:name=".simple.activities.GalleryActivity"></activity>
         <activity
             android:name=".activities.LoginActivity"
             android:label="@string/title_activity_login"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -65,7 +67,7 @@
         <activity
             android:name=".activities.ftp_connections.FtpConnectionsActivity"
             android:label="@string/app_name"
-            android:theme="@style/AppTheme.NoActionBar"></activity>
+            android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name=".activities.ftp_connections.AddFtpConnectionActivity"
             android:label="@string/title_activity_add_ftp_conenctino"
@@ -100,7 +102,6 @@
                 <data android:scheme="@string/fb_login_protocol_scheme" />
             </intent-filter>
         </activity>
-
     </application>
 
 </manifest>
