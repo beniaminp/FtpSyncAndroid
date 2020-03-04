@@ -26,13 +26,15 @@ import com.padana.ftpsync.database.DatabaseClient
 import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.entities.SyncData
 import com.padana.ftpsync.interfaces.BtnClickListener
-import com.padana.ftpsync.services.SyncDataService
 import com.padana.ftpsync.shared.PadanaAsyncTask
 import com.padana.ftpsync.simple.activities.GalleryActivity
+import com.padana.ftpsync.simple.services.utils.MediaUtils
 import com.padana.ftpsync.utils.FileHelpers
 import kotlinx.android.synthetic.main.activity_ftp_connections.*
 import kotlinx.android.synthetic.main.content_ftp_connections.*
 import kotlinx.android.synthetic.main.progress_dialog.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 
 class FtpConnectionsActivity : AppCompatActivity() {
@@ -56,12 +58,12 @@ class FtpConnectionsActivity : AppCompatActivity() {
         populateFtpClientList()
         setSupportActionBar(toolbar)
 
-        syncDataServiceIntent = Intent(this, SyncDataService::class.java)
+        /*syncDataServiceIntent = Intent(this, SyncDataService::class.java)
         Thread(Runnable {
             run {
                 startService(syncDataServiceIntent)
             }
-        }).start()
+        }).start()*/
     }
 
     override fun onResume() {

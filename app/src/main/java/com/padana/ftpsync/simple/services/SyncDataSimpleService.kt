@@ -14,6 +14,7 @@ import com.padana.ftpsync.database.DatabaseClient
 import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.entities.SyncData
 import com.padana.ftpsync.services.utils.*
+import com.padana.ftpsync.simple.services.utils.MediaUtils
 import com.padana.ftpsync.utils.ConnTypes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -111,6 +112,26 @@ class SyncDataSimpleService : Service() {
             ftpClientsList.forEach { ftpClient ->
                 val syncDataForClient: List<SyncData> = getSyncDataForClient(ftpClient.id!!, syncDataList)
                 val storeFilesList: MutableList<MutableList<StoreFiles>> = mutableListOf()
+
+                // start simple method
+                val rootLocation: String = ftpClient.rootLocation ? ftpC
+                val connection = ftpClientConnectionsMap[ftpClient.id!!]
+
+                val images = MediaUtils.getImages()
+                images?.forEach { image ->
+                    connection?.let { client ->
+                        // storeFilesList.add(computeFilesSFTP(client, syncData))
+                        val directoryExists = SFTPUtils.checkDirectoryExists(client as ChannelSftp, )
+                    }
+                            ?: run { ftpClientConnectionsMap[ftpClient.id!!] = createSFTPConnection(ftpClient) }
+                }
+
+
+                val videos = MediaUtils.getVideos()
+
+
+                // end simple method
+
 
                 try {
                     val ftp = ftpClientConnectionsMap[ftpClient.id!!]
@@ -320,7 +341,7 @@ class SyncDataSimpleService : Service() {
 
                 LogerFileUtils.error(e.message!!)
 
-                startForeground(NOTIFICATION_ID, NotifUtils.getNotification("Conenction error...", "Server " + ftpClient.hostName + " " + e.message!!))
+                startForeground(NOTIFICATION_ID, NotifUtils.getNotification("Connection error...", "Server " + ftpClient.hostName + " " + e.message!!))
                 System.err.println("Could not connect to server...")
                 return@withContext null
             }
