@@ -12,14 +12,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.padana.ftpsync.R
 import com.padana.ftpsync.simple.fragments.dummy.DummyContent
 import com.padana.ftpsync.simple.fragments.dummy.DummyContent.DummyItem
+import com.padana.ftpsync.simple.interfaces.RecViewLoadMore
 
-class GalleryItemFragment : Fragment(), MyGalleryItemRecyclerViewAdapter.OnLoadMore {
+class GalleryItemFragment : Fragment() {
 
     // TODO: Customize parameters
-    private var columnCount = 1
+    private var columnCount = 3
 
     private var listener: OnListFragmentInteractionListener? = null
-    // private var onLoadMore: MyGalleryItemRecyclerViewAdapter.OnLoadMore? = null
     private var recAdapter: MyGalleryItemRecyclerViewAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,6 +34,12 @@ class GalleryItemFragment : Fragment(), MyGalleryItemRecyclerViewAdapter.OnLoadM
                               savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_galleryitem_list, container, false)
 
+        val onLoadMore = object : RecViewLoadMore {
+            override fun onLoadMore(position: Number) {
+                recAdapter?.addItems(DummyContent.ITEMS)
+            }
+        }
+
         // Set the adapter
         if (view is RecyclerView) {
             with(view) {
@@ -42,6 +48,7 @@ class GalleryItemFragment : Fragment(), MyGalleryItemRecyclerViewAdapter.OnLoadM
                     else -> GridLayoutManager(context, columnCount)
                 }
                 recAdapter = MyGalleryItemRecyclerViewAdapter(DummyContent.ITEMS, listener, onLoadMore)
+                adapter = recAdapter
             }
         }
         return view
@@ -54,10 +61,6 @@ class GalleryItemFragment : Fragment(), MyGalleryItemRecyclerViewAdapter.OnLoadM
         } else {
             throw RuntimeException("$context must implement OnListFragmentInteractionListener")
         }
-    }
-
-    override fun onLoadMore(position: Number) {
-        recAdapter?.addItems(DummyContent.ITEMS)
     }
 
     override fun onDetach() {

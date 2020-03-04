@@ -9,13 +9,17 @@ import androidx.recyclerview.widget.RecyclerView
 import com.padana.ftpsync.R
 import com.padana.ftpsync.simple.fragments.GalleryItemFragment.OnListFragmentInteractionListener
 import com.padana.ftpsync.simple.fragments.dummy.DummyContent.DummyItem
+import com.padana.ftpsync.simple.interfaces.RecViewLoadMore
 import kotlinx.android.synthetic.main.fragment_galleryitem.view.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 
 class MyGalleryItemRecyclerViewAdapter(
         private val mValues: MutableList<DummyItem>,
         private val mListener: OnListFragmentInteractionListener?,
-        private val mLoaderMore: OnLoadMore?)
+        private val mLoaderMore: RecViewLoadMore?)
     : RecyclerView.Adapter<MyGalleryItemRecyclerViewAdapter.ViewHolder>() {
 
     private val mOnClickListener: View.OnClickListener
@@ -38,7 +42,9 @@ class MyGalleryItemRecyclerViewAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         if (position == mValues.size - 1) {
-            mLoaderMore?.onLoadMore(position)
+            GlobalScope.launch(Dispatchers.Main) {
+                loadMoreAsync(position)
+            }
         }
         val item = mValues[position]
         holder.mIdView.text = item.id
@@ -48,6 +54,10 @@ class MyGalleryItemRecyclerViewAdapter(
             tag = item
             setOnClickListener(mOnClickListener)
         }
+    }
+
+    private suspend fun loadMoreAsync(position: Int) {
+        mLoaderMore?.onLoadMore(position)
     }
 
     override fun getItemCount(): Int = mValues.size
@@ -64,9 +74,5 @@ class MyGalleryItemRecyclerViewAdapter(
         override fun toString(): String {
             return super.toString() + " '" + mContentView.text + "'"
         }
-    }
-
-    interface OnLoadMore {
-        fun onLoadMore(position: Number)
     }
 }
