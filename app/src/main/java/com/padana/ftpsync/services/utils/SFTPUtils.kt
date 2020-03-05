@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
+import java.io.InputStream
 import java.util.*
 
 object SFTPUtils {
@@ -99,6 +100,18 @@ object SFTPUtils {
                 return@withContext false
             }
             bis.close()
+            return@withContext true
+        }
+    }
+
+    suspend fun storeFileOnRemoteSimple(localFileIS: InputStream, sftp: ChannelSftp, location: String, fileName: String): Boolean? {
+        return withContext(Dispatchers.IO) {
+            try {
+                sftp.put(localFileIS, "$location/$fileName")
+            } catch (e: SftpException) {
+                LogerFileUtils.error(e.message!! + " => " + fileName)
+                return@withContext false
+            }
             return@withContext true
         }
     }

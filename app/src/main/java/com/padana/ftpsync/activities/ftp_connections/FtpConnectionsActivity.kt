@@ -26,20 +26,18 @@ import com.padana.ftpsync.database.DatabaseClient
 import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.entities.SyncData
 import com.padana.ftpsync.interfaces.BtnClickListener
+import com.padana.ftpsync.services.SyncDataSimpleService
 import com.padana.ftpsync.shared.PadanaAsyncTask
 import com.padana.ftpsync.simple.activities.GalleryActivity
-import com.padana.ftpsync.simple.services.utils.MediaUtils
 import com.padana.ftpsync.utils.FileHelpers
 import kotlinx.android.synthetic.main.activity_ftp_connections.*
 import kotlinx.android.synthetic.main.content_ftp_connections.*
 import kotlinx.android.synthetic.main.progress_dialog.*
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 
 
 class FtpConnectionsActivity : AppCompatActivity() {
     lateinit var genericDAO: GenericDAO
-    lateinit var syncDataServiceIntent: Intent
+    lateinit var syncDataSimpleServiceIntent: Intent
     var selectedFtpClient: FtpClient? = null
     private val RECORD_REQUEST_CODE = 101
     private val TAG = "PermissionDemo"
@@ -58,12 +56,12 @@ class FtpConnectionsActivity : AppCompatActivity() {
         populateFtpClientList()
         setSupportActionBar(toolbar)
 
-        /*syncDataServiceIntent = Intent(this, SyncDataService::class.java)
+        syncDataSimpleServiceIntent = Intent(this, SyncDataSimpleService::class.java)
         Thread(Runnable {
             run {
-                startService(syncDataServiceIntent)
+                startService(syncDataSimpleServiceIntent)
             }
-        }).start()*/
+        }).start()
     }
 
     override fun onResume() {
@@ -269,7 +267,7 @@ class FtpConnectionsActivity : AppCompatActivity() {
         // Handle item selection
         return when (item.itemId) {
             R.id.exit -> {
-                stopService(syncDataServiceIntent)
+                stopService(syncDataSimpleServiceIntent)
                 android.os.Process.killProcess(android.os.Process.myPid())
                 true
             }
