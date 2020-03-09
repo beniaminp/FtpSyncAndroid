@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.os.IBinder
 import android.os.Process
 import android.os.SystemClock
@@ -26,6 +27,8 @@ import kotlinx.coroutines.withContext
 import org.apache.commons.net.ftp.FTPClient
 import org.apache.commons.net.ftp.FTPClientConfig
 import org.apache.commons.net.ftp.FTPReply
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
 
@@ -125,6 +128,11 @@ class SyncDataSimpleService : Service() {
                         SFTPUtils.makeDirectories(client, rootLocation)
                     }
 
+                    val thumbnailDirectoryExists = SFTPUtils.checkDirectoryExists(client, "$rootLocation/thumbnails/")
+                    if (!thumbnailDirectoryExists) {
+                        SFTPUtils.makeDirectories(client, "$rootLocation/thumbnails/")
+                    }
+
                     val remoteFiles: Vector<ChannelSftp.LsEntry>? = SFTPUtils.listFilesByPath(client, rootLocation) as Vector<ChannelSftp.LsEntry>?
 
                     val images = MediaUtils.getImages()?.take(10)
@@ -139,6 +147,11 @@ class SyncDataSimpleService : Service() {
                             val fileInputStream = contentResolver.openInputStream(image.uri)!!
                             SFTPUtils.storeFileOnRemoteSimple(fileInputStream, client, rootLocation, image.name)
                             fileInputStream.close()
+
+                            val thumbnailOutputStream = ByteArrayOutputStream()
+                            MediaUtils.getImageThumbnail(image).compress(Bitmap.CompressFormat.JPEG, 100, thumbnailOutputStream)
+                            SFTPUtils.storeFileOnRemoteSimple(ByteArrayInputStream(thumbnailOutputStream.toByteArray()), client, "$rootLocation/thumbnails/", image.name)
+
                         }
                     }
                 }

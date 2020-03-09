@@ -41,6 +41,12 @@
             android:exported="true"
             android:launchMode="singleTop" />
 
+        <service
+            android:name=".services.SyncDataSimpleService"
+            android:enabled="true"
+            android:exported="true"
+            android:launchMode="singleTop" />
+
         <activity
             android:name=".activities.ChooseLocalFolder"
             android:label="@string/title_activity_choose_local_folder"

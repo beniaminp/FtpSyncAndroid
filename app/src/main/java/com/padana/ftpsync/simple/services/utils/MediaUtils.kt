@@ -2,8 +2,11 @@ package com.padana.ftpsync.simple.services.utils
 
 import android.content.ContentUris
 import android.database.Cursor
+import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
+import android.util.Size
 import com.padana.ftpsync.MyApp
 import java.util.concurrent.TimeUnit
 
@@ -15,6 +18,15 @@ object MediaUtils {
 
     suspend fun getImages(): MutableList<Image>? {
         return createImagesQuery()?.let { performImagesQuery(it) }
+    }
+
+    fun getImageThumbnail(image: Image): Bitmap {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MyApp.getCtx().contentResolver.loadThumbnail(
+                    image.uri, Size(640, 480), null)
+        } else {
+            TODO("VERSION.SDK_INT < LOLLIPOP")
+        }
     }
 
     private fun createVideoQuery(): Cursor? {
