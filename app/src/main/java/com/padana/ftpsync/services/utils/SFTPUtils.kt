@@ -27,6 +27,7 @@ object SFTPUtils {
         session.setPassword(ftpClient.password)
         session.timeout = 30000
         session.setConfig(config)
+        session.port = if (ftpClient.sftpPort != null) ftpClient.sftpPort!!.toInt() else 22
         session.connect()
 
         sftpChannel = session.openChannel("sftp") as ChannelSftp

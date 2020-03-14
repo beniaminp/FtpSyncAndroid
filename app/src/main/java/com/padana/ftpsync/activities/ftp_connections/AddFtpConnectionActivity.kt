@@ -61,6 +61,7 @@ class AddFtpConnectionActivity : AppCompatActivity() {
                     txtFtpPassword.text.toString().trim(),
                     txtRootFileLocation.text.toString().trim(),
                     spinnerConnectionType.selectedItem.toString().trim(),
+                    txtSftpPort.text.toString(),
                     txtHostName.text.toString().trim())
             GlobalScope.launch {
                 saveFtpClient(ftpClient)
@@ -70,7 +71,7 @@ class AddFtpConnectionActivity : AppCompatActivity() {
         btnTestFtp.setOnClickListener { v ->
             GlobalScope.launch {
                 testFtpClient(txtFtpHost.text.toString(), txtFtpUser.text.toString(), txtFtpPassword.text.toString(), v,
-                        spinnerConnectionType.selectedItem.toString().trim())
+                        spinnerConnectionType.selectedItem.toString().trim(), txtSftpPort.toString().trim())
             }
         }
     }
@@ -82,7 +83,7 @@ class AddFtpConnectionActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun testFtpClient(host: String, user: String, password: String, v: View, connType: String?) {
+    private suspend fun testFtpClient(host: String, user: String, password: String, v: View, connType: String?, sftpPort: String?) {
         return withContext(Dispatchers.IO) {
             if (connType!!.toLowerCase().equals(ConnTypes.FTP)) {
                 val ftp = FTPClient()
@@ -110,6 +111,7 @@ class AddFtpConnectionActivity : AppCompatActivity() {
 
                     val session: Session = jsch.getSession(user, host)
                     session.setPassword(password)
+                    session.port = sftpPort!!.toInt()
                     session.setConfig(config)
                     session.connect()
 

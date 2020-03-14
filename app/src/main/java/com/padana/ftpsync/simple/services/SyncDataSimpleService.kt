@@ -150,7 +150,7 @@ class SyncDataSimpleService : Service() {
 
                             val thumbnailOutputStream = ByteArrayOutputStream()
                             MediaUtils.getImageThumbnail(image).compress(Bitmap.CompressFormat.JPEG, 100, thumbnailOutputStream)
-                            SFTPUtils.storeFileOnRemoteSimple(ByteArrayInputStream(thumbnailOutputStream.toByteArray()), client, "$rootLocation/thumbnails/", image.name)
+                            SFTPUtils.storeFileOnRemoteSimple(ByteArrayInputStream(thumbnailOutputStream.toByteArray()), client, "$rootLocation/thumbnails/", image.name + "_" + image.dateTaken)
 
                         }
                     }
