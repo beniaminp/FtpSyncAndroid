@@ -71,7 +71,7 @@ class AddFtpConnectionActivity : AppCompatActivity() {
         btnTestFtp.setOnClickListener { v ->
             GlobalScope.launch {
                 testFtpClient(txtFtpHost.text.toString(), txtFtpUser.text.toString(), txtFtpPassword.text.toString(), v,
-                        spinnerConnectionType.selectedItem.toString().trim(), txtSftpPort.toString().trim())
+                        spinnerConnectionType.selectedItem.toString().trim(), txtSftpPort.text.toString().trim())
             }
         }
     }

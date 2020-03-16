@@ -23,7 +23,7 @@ object MediaUtils {
     fun getImageThumbnail(image: Image): Bitmap {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             MyApp.getCtx().contentResolver.loadThumbnail(
-                    image.uri, Size(640, 480), null)
+                    image.uri, Size(320, 240), null)
         } else {
             TODO("VERSION.SDK_INT < LOLLIPOP")
         }

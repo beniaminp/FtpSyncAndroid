@@ -12,6 +12,7 @@ import android.os.Process
 import android.os.SystemClock
 import com.jcraft.jsch.ChannelSftp
 import com.padana.ftpsync.database.DatabaseClient
+import com.padana.ftpsync.entities.FileInfo
 import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.entities.SyncData
 import com.padana.ftpsync.services.utils.InternetUtils
@@ -79,6 +80,10 @@ class SyncDataSimpleService : Service() {
                     }
                 }
             }
+            if (ftpClientsList.isEmpty()) {
+                Thread.sleep(10000)
+                loadRemoteClients()
+            }
         }
     }
 
@@ -117,17 +122,16 @@ class SyncDataSimpleService : Service() {
                 if (ftpClient.rootLocation.isNullOrEmpty()) {
                     rootLocation = "/home/" + ftpClient.user + "/FileSync/"
                 } else {
-                    rootLocation = ftpClient.rootLocation!!
+                    rootLocation = ftpClient.rootLocation!! + "/FileSync/"
                 }
                 val connection = ftpClientConnectionsMap[ftpClient.id!!]
 
                 connection?.let { client ->
-                    // storeFilesList.add(computeFilesSFTP(client, syncData))
                     val directoryExists = SFTPUtils.checkDirectoryExists(client as ChannelSftp, rootLocation)
                     if (!directoryExists) {
                         SFTPUtils.makeDirectories(client, rootLocation)
                     }
-
+                    var fileInfos = getAllFileInfos(ftpClient)
                     val thumbnailDirectoryExists = SFTPUtils.checkDirectoryExists(client, "$rootLocation/thumbnails/")
                     if (!thumbnailDirectoryExists) {
                         SFTPUtils.makeDirectories(client, "$rootLocation/thumbnails/")
@@ -143,7 +147,9 @@ class SyncDataSimpleService : Service() {
                                 remoteFileExists = true
                             }
                         }
+                        var fileInfo: FileInfo? = fileInfos.find { fileInfo -> fileInfo.name == image.name }
                         if (!remoteFileExists) {
+                            startForeground(NOTIFICATION_ID, NotifUtils.getNotification("File Sync", "Sending image ${image.name}..."))
                             val fileInputStream = contentResolver.openInputStream(image.uri)!!
                             SFTPUtils.storeFileOnRemoteSimple(fileInputStream, client, rootLocation, image.name)
                             fileInputStream.close()
@@ -151,7 +157,10 @@ class SyncDataSimpleService : Service() {
                             val thumbnailOutputStream = ByteArrayOutputStream()
                             MediaUtils.getImageThumbnail(image).compress(Bitmap.CompressFormat.JPEG, 100, thumbnailOutputStream)
                             SFTPUtils.storeFileOnRemoteSimple(ByteArrayInputStream(thumbnailOutputStream.toByteArray()), client, "$rootLocation/thumbnails/", image.name + "_" + image.dateTaken)
-
+                        }
+                        if (fileInfo == null) {
+                            fileInfo = FileInfo(null, ftpClient.id, image.name, image.dateTaken, "$rootLocation/thumbnails/${image.name}_${image.dateTaken}", "$rootLocation/${image.name}")
+                            DatabaseClient(applicationContext).getAppDatabase().genericDAO.addFileInfo(fileInfo)
                         }
                     }
                 }
@@ -174,6 +183,9 @@ class SyncDataSimpleService : Service() {
             doSync()
         }
     }
+
+    private fun getAllFileInfos(ftpClient: FtpClient) =
+            DatabaseClient(applicationContext).getAppDatabase().genericDAO.findAllFileInfoByServerId(ftpClient.id!!)
 
     private suspend fun loadAllSyncData(): Array<SyncData>? {
         return withContext(Dispatchers.IO) {

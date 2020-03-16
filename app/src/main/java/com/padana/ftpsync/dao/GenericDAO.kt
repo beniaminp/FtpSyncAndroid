@@ -1,6 +1,7 @@
 package com.padana.ftpsync.dao
 
 import androidx.room.*
+import com.padana.ftpsync.entities.FileInfo
 import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.entities.SyncData
 
@@ -38,6 +39,21 @@ interface GenericDAO {
 
     @Query("SELECT * FROM sync_data WHERE serverId=:serverId")
     fun findSyncDataByFtpClientId(serverId: Int): Array<SyncData>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun addFileInfo(vararg fileInfo: FileInfo)
+
+    @Update
+    fun updateFileInfo(vararg fileInfo: FileInfo)
+
+    @Delete
+    fun deleteFileInfo(vararg fileInfo: FileInfo)
+
+    @Query("SELECT * FROM file_info WHERE dateTaken<=:dateTaken")
+    fun findAllFileInfoLowerThan(dateTaken: String): Array<FileInfo>
+
+    @Query("SELECT * FROM file_info where serverId=:serverId")
+    fun findAllFileInfoByServerId(serverId: Int): Array<FileInfo>
 
     /* @Query("SELECT * FROM user WHERE age > :minAge")
      fun loadAllUsersOlderThan(minAge: Int): Array<User>*/
