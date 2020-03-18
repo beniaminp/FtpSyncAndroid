@@ -10,9 +10,18 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.padana.ftpsync.R
+import com.padana.ftpsync.database.DatabaseClient
+import com.padana.ftpsync.entities.FileInfo
+import com.padana.ftpsync.entities.FtpClient
+import com.padana.ftpsync.simple.activities.GalleryActivity
 import com.padana.ftpsync.simple.fragments.dummy.DummyContent
 import com.padana.ftpsync.simple.fragments.dummy.DummyContent.DummyItem
 import com.padana.ftpsync.simple.interfaces.RecViewLoadMore
+import com.padana.ftpsync.utils.Partition
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class GalleryItemFragment : Fragment() {
 
@@ -33,22 +42,31 @@ class GalleryItemFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_galleryitem_list, container, false)
+        val galleryActivity: GalleryActivity = activity as GalleryActivity
 
-        val onLoadMore = object : RecViewLoadMore {
-            override fun onLoadMore(position: Number) {
-                recAdapter?.addItems(DummyContent.ITEMS)
-            }
-        }
+        val ftpClient = galleryActivity.getFtpClient()
+        GlobalScope.launch {
+            val fileInfos = getAllFileInfos(ftpClient)
+            val partitions = Partition.ofSize(fileInfos.toMutableList(), 25)
+            var currentPartition = 0
 
-        // Set the adapter
-        if (view is RecyclerView) {
-            with(view) {
-                layoutManager = when {
-                    columnCount <= 1 -> LinearLayoutManager(context)
-                    else -> GridLayoutManager(context, columnCount)
+            val onLoadMore = object : RecViewLoadMore {
+                override fun onLoadMore(position: Number) {
+                    recAdapter?.addItems(partitions.get(currentPartition))
                 }
-                recAdapter = MyGalleryItemRecyclerViewAdapter(DummyContent.ITEMS, listener, onLoadMore)
-                adapter = recAdapter
+            }
+
+            // Set the adapter
+            if (view is RecyclerView) {
+                with(view) {
+                    layoutManager = when {
+                        columnCount <= 1 -> LinearLayoutManager(context)
+                        else -> GridLayoutManager(context, columnCount)
+                    }
+                    recAdapter = MyGalleryItemRecyclerViewAdapter(partitions.get(currentPartition), listener, onLoadMore, ftpClient)
+                    currentPartition += 1
+                    adapter = recAdapter
+                }
             }
         }
         return view
@@ -77,7 +95,7 @@ class GalleryItemFragment : Fragment() {
      */
     interface OnListFragmentInteractionListener {
         // TODO: Update argument type and name
-        fun onListFragmentInteraction(item: DummyItem?)
+        fun onListFragmentInteraction(item: FileInfo?)
     }
 
     companion object {
@@ -94,4 +112,9 @@ class GalleryItemFragment : Fragment() {
                     }
                 }
     }
+
+    private suspend fun getAllFileInfos(ftpClient: FtpClient) =
+            withContext(Dispatchers.Default) {
+                DatabaseClient(context!!).getAppDatabase().genericDAO.findAllFileInfoByServerIdOrderDateDesc(ftpClient.id!!)
+            }
 }

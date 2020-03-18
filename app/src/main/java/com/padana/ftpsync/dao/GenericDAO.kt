@@ -55,6 +55,9 @@ interface GenericDAO {
     @Query("SELECT * FROM file_info where serverId=:serverId")
     fun findAllFileInfoByServerId(serverId: Int): Array<FileInfo>
 
+    @Query("SELECT * FROM file_info where serverId=:serverId ORDER BY dateTaken DESC")
+    fun findAllFileInfoByServerIdOrderDateDesc(serverId: Int): Array<FileInfo>
+
     /* @Query("SELECT * FROM user WHERE age > :minAge")
      fun loadAllUsersOlderThan(minAge: Int): Array<User>*/
 }
