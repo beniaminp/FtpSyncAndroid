@@ -20,7 +20,7 @@ import java.security.Security
 object SSHJUtils {
     private var sftpClients: Map<Int, SFTPClient> = HashMap()
     fun createSFTPConnection(ftpClient: FtpClient): SFTPClient? {
-        val sftpClient: SFTPClient
+        var sftpClient: SFTPClient
         if (sftpClients[ftpClient.id] == null) {
             Security.removeProvider("BC")
             Security.insertProviderAt(BouncyCastleProvider(), Security.getProviders().size + 1)

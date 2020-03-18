@@ -21,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.jpountz.lz4.LZ4Factory
 import net.schmizz.sshj.xfer.FileSystemFile
 import java.io.File
 
@@ -105,7 +106,7 @@ class MyGalleryItemRecyclerViewAdapter(
         return withContext(Dispatchers.IO) {
             var file = File("")
             SSHJUtils.createSFTPConnection(ftpClient)?.let { sftpChan ->
-                var outputFile = File.createTempFile("prefix", ".jpeg", MyApp.getCtx().externalCacheDir)
+                val outputFile = File.createTempFile("prefix", ".jpeg", MyApp.getCtx().externalCacheDir)
                 sftpChan.get(fileInfo.thumbnailLocation, FileSystemFile(outputFile))
                 file = outputFile
             }
