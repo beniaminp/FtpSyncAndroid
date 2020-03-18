@@ -14,8 +14,6 @@ import com.padana.ftpsync.database.DatabaseClient
 import com.padana.ftpsync.entities.FileInfo
 import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.simple.activities.GalleryActivity
-import com.padana.ftpsync.simple.fragments.dummy.DummyContent
-import com.padana.ftpsync.simple.fragments.dummy.DummyContent.DummyItem
 import com.padana.ftpsync.simple.interfaces.RecViewLoadMore
 import com.padana.ftpsync.utils.Partition
 import kotlinx.coroutines.Dispatchers
@@ -45,14 +43,16 @@ class GalleryItemFragment : Fragment() {
         val galleryActivity: GalleryActivity = activity as GalleryActivity
 
         val ftpClient = galleryActivity.getFtpClient()
-        GlobalScope.launch {
+        GlobalScope.launch(Dispatchers.Main) {
             val fileInfos = getAllFileInfos(ftpClient)
             val partitions = Partition.ofSize(fileInfos.toMutableList(), 25)
             var currentPartition = 0
 
             val onLoadMore = object : RecViewLoadMore {
                 override fun onLoadMore(position: Number) {
-                    recAdapter?.addItems(partitions.get(currentPartition))
+                    if (partitions.size < currentPartition) {
+                        recAdapter?.addItems(partitions.get(currentPartition))
+                    }
                 }
             }
 

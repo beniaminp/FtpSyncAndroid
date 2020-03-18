@@ -5,22 +5,24 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.RecyclerView
 import com.padana.ftpsync.MyApp
 import com.padana.ftpsync.R
 import com.padana.ftpsync.entities.FileInfo
 import com.padana.ftpsync.entities.FtpClient
-import com.padana.ftpsync.services.utils.SFTPUtils
+import com.padana.ftpsync.services.utils.SSHJUtils
 import com.padana.ftpsync.simple.fragments.GalleryItemFragment.OnListFragmentInteractionListener
 import com.padana.ftpsync.simple.interfaces.RecViewLoadMore
 import com.squareup.picasso.Picasso
+import com.stfalcon.imageviewer.StfalconImageViewer
 import kotlinx.android.synthetic.main.fragment_galleryitem.view.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.schmizz.sshj.xfer.FileSystemFile
 import java.io.File
-import java.io.FileOutputStream
 
 
 class MyGalleryItemRecyclerViewAdapter(
@@ -29,15 +31,30 @@ class MyGalleryItemRecyclerViewAdapter(
         private val mLoaderMore: RecViewLoadMore?,
         private val ftpClient: FtpClient)
     : RecyclerView.Adapter<MyGalleryItemRecyclerViewAdapter.ViewHolder>() {
+    private lateinit var dialog: AlertDialog
 
     private val mOnClickListener: View.OnClickListener
 
     init {
         mOnClickListener = View.OnClickListener { v ->
             val item = v.tag as FileInfo
-            // Notify the active callbacks interface (the activity, if the fragment is attached to
-            // one) that an item has been selected.
-            mListener?.onListFragmentInteraction(item)
+            var position = 0
+            mValues.forEachIndexed { index, fileInfo ->
+                if (fileInfo.id == item.id) {
+                    position = index
+                }
+            }
+            val salfcon = StfalconImageViewer.Builder(v.context, mValues) { view, image ->
+                GlobalScope.launch(Dispatchers.Main) {
+                    dialog.show()
+                    val image = getRemoteFile(item)
+                    dialog.hide()
+                    Picasso.get().load(image).into(view)
+                }
+            }
+            salfcon.show().setCurrentPosition(position)
+
+            // mListener?.onListFragmentInteraction(item)
         }
     }
 
@@ -45,6 +62,10 @@ class MyGalleryItemRecyclerViewAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
                 .inflate(R.layout.fragment_galleryitem, parent, false)
+        val builder = AlertDialog.Builder(parent.context)
+        builder.setCancelable(false); // if you want user to wait for some process to finish,
+        builder.setView(R.layout.layout_loading_dialog);
+        dialog = builder.create()
         return ViewHolder(view)
     }
 
@@ -56,10 +77,8 @@ class MyGalleryItemRecyclerViewAdapter(
         }
         val fileInfo = mValues[position]
         GlobalScope.launch(Dispatchers.Main) {
-            val image = getRemoteFile(fileInfo)
+            val image = getRemoteFileThumbanil(fileInfo)
             Picasso.get().load(image).into(holder.mContentView)
-
-
             with(holder.mView) {
                 tag = fileInfo
                 setOnClickListener(mOnClickListener)
@@ -82,17 +101,25 @@ class MyGalleryItemRecyclerViewAdapter(
         val mContentView: ImageView = mView.imageView
     }
 
+    private suspend fun getRemoteFileThumbanil(fileInfo: FileInfo): File {
+        return withContext(Dispatchers.IO) {
+            var file = File("")
+            SSHJUtils.createSFTPConnection(ftpClient)?.let { sftpChan ->
+                var outputFile = File.createTempFile("prefix", ".jpeg", MyApp.getCtx().externalCacheDir)
+                sftpChan.get(fileInfo.thumbnailLocation, FileSystemFile(outputFile))
+                file = outputFile
+            }
+            file
+        }
+    }
+
     private suspend fun getRemoteFile(fileInfo: FileInfo): File {
         return withContext(Dispatchers.IO) {
-            var byteArray: ByteArray?
             var file = File("")
-            SFTPUtils.createSFTPConnection(ftpClient)?.let { sftpChan ->
+            SSHJUtils.createSFTPConnection(ftpClient)?.let { sftpChan ->
                 var outputFile = File.createTempFile("prefix", ".jpeg", MyApp.getCtx().externalCacheDir)
-                byteArray = sftpChan.get(fileInfo.thumbnailLocation).readBytes()
-                var fos = FileOutputStream(outputFile)
-                fos.write(byteArray)
+                sftpChan.get(fileInfo.location, FileSystemFile(outputFile))
                 file = outputFile
-
             }
             file
         }

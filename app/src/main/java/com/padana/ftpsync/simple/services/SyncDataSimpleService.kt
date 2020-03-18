@@ -18,13 +18,14 @@ import com.padana.ftpsync.entities.SyncData
 import com.padana.ftpsync.services.utils.InternetUtils
 import com.padana.ftpsync.services.utils.LogerFileUtils
 import com.padana.ftpsync.services.utils.NotifUtils
-import com.padana.ftpsync.services.utils.SFTPUtils
+import com.padana.ftpsync.services.utils.SSHJUtils
 import com.padana.ftpsync.simple.services.utils.MediaUtils
 import com.padana.ftpsync.utils.ConnTypes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.schmizz.sshj.sftp.SFTPClient
 import org.apache.commons.net.ftp.FTPClient
 import org.apache.commons.net.ftp.FTPClientConfig
 import org.apache.commons.net.ftp.FTPReply
@@ -120,30 +121,30 @@ class SyncDataSimpleService : Service() {
                 // start simple method
                 var rootLocation = ""
                 if (ftpClient.rootLocation.isNullOrEmpty()) {
-                    rootLocation = "/home/" + ftpClient.user + "/FileSync/"
+                    rootLocation = "/home/" + ftpClient.user + "/FileSync"
                 } else {
-                    rootLocation = ftpClient.rootLocation!! + "/FileSync/"
+                    rootLocation = ftpClient.rootLocation!! + "/FileSync"
                 }
                 val connection = ftpClientConnectionsMap[ftpClient.id!!]
 
                 connection?.let { client ->
-                    val directoryExists = SFTPUtils.checkDirectoryExists(client as ChannelSftp, rootLocation)
+                    val directoryExists = SSHJUtils.checkDirectoryExists(client as SFTPClient, rootLocation)
                     if (!directoryExists) {
-                        SFTPUtils.makeDirectories(client, rootLocation)
+                        SSHJUtils.makeDirectories(client, rootLocation)
                     }
                     var fileInfos = getAllFileInfos(ftpClient)
-                    val thumbnailDirectoryExists = SFTPUtils.checkDirectoryExists(client, "$rootLocation/thumbnails/")
+                    val thumbnailDirectoryExists = SSHJUtils.checkDirectoryExists(client, "$rootLocation/thumbnails/")
                     if (!thumbnailDirectoryExists) {
-                        SFTPUtils.makeDirectories(client, "$rootLocation/thumbnails/")
+                        SSHJUtils.makeDirectories(client, "$rootLocation/thumbnails/")
                     }
 
-                    val remoteFiles: Vector<ChannelSftp.LsEntry>? = SFTPUtils.listFilesByPath(client, rootLocation) as Vector<ChannelSftp.LsEntry>?
+                    val remoteFiles = SSHJUtils.listFilesByPath(client, rootLocation)
 
                     val images = MediaUtils.getImages()?.take(10)
                     images?.forEach { image ->
                         var remoteFileExists = false
-                        remoteFiles?.forEach { remoteFile ->
-                            if (remoteFile.filename == image.name) {
+                        remoteFiles.forEach { remoteFile ->
+                            if (remoteFile.name == image.name) {
                                 remoteFileExists = true
                             }
                         }
@@ -151,15 +152,15 @@ class SyncDataSimpleService : Service() {
                         if (!remoteFileExists) {
                             startForeground(NOTIFICATION_ID, NotifUtils.getNotification("File Sync", "Sending image ${image.name}..."))
                             val fileInputStream = contentResolver.openInputStream(image.uri)!!
-                            SFTPUtils.storeFileOnRemoteSimple(fileInputStream, client, rootLocation, image.name)
+                            SSHJUtils.storeFileOnRemoteSimple(fileInputStream, client, rootLocation, image.name)
                             fileInputStream.close()
 
                             val thumbnailOutputStream = ByteArrayOutputStream()
-                            MediaUtils.getImageThumbnail(image).compress(Bitmap.CompressFormat.JPEG, 100, thumbnailOutputStream)
-                            SFTPUtils.storeFileOnRemoteSimple(ByteArrayInputStream(thumbnailOutputStream.toByteArray()), client, "$rootLocation/thumbnails/", image.name + "_" + image.dateTaken)
+                            MediaUtils.getImageThumbnail(image).compress(Bitmap.CompressFormat.JPEG, 10, thumbnailOutputStream)
+                            SSHJUtils.storeFileOnRemoteSimple(ByteArrayInputStream(thumbnailOutputStream.toByteArray()), client, "$rootLocation/thumbnails/", image.name)
                         }
                         if (fileInfo == null) {
-                            fileInfo = FileInfo(null, ftpClient.id, image.name, image.dateTaken, "$rootLocation/thumbnails/${image.name}_${image.dateTaken}", "$rootLocation/${image.name}")
+                            fileInfo = FileInfo(null, ftpClient.id, image.name, image.dateTaken, "$rootLocation/thumbnails/${image.name}", "$rootLocation/${image.name}")
                             DatabaseClient(applicationContext).getAppDatabase().genericDAO.addFileInfo(fileInfo)
                         }
                     }
@@ -230,10 +231,10 @@ class SyncDataSimpleService : Service() {
         }
     }
 
-    private suspend fun createSFTPConnection(ftpClient: FtpClient): ChannelSftp? {
+    private suspend fun createSFTPConnection(ftpClient: FtpClient): SFTPClient? {
         return withContext(Dispatchers.IO) {
             try {
-                return@withContext SFTPUtils.createSFTPConnection(ftpClient)
+                return@withContext SSHJUtils.createSFTPConnection(ftpClient)
             } catch (e: Exception) {
                 e.printStackTrace()
 
