@@ -3,6 +3,7 @@ package com.padana.ftpsync.simple.activities
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.padana.ftpsync.R
+import com.padana.ftpsync.entities.FileInfo
 import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.simple.fragments.GalleryItemFragment
 import com.padana.ftpsync.simple.fragments.dummy.DummyContent
@@ -16,8 +17,8 @@ class GalleryActivity : AppCompatActivity(), GalleryItemFragment.OnListFragmentI
 
     }
 
-    override fun onListFragmentInteraction(item: DummyContent.DummyItem?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun onListFragmentInteraction(item: FileInfo?) {
+        TODO("Not yet implemented")
     }
 
     fun getFtpClient(): FtpClient {
