@@ -20,8 +20,9 @@ object FTPUtils : ConnectorUtil {
             apacheFtpClient = FTPClient()
             apacheFtpClient.connect(ftpClient.server, if (ftpClient.sftpPort != null) ftpClient.sftpPort!!.toInt() else 21)
             apacheFtpClient.login(ftpClient.user, ftpClient.password)
-            apacheFtpClient.enterLocalPassiveMode()
             apacheFtpClient.setFileType(FTP.BINARY_FILE_TYPE)
+            apacheFtpClient.enterLocalPassiveMode()
+            apacheFtpClient.sendCommand("OPTS UTF8 ON")
             apacheFtpClientsList[ftpClient.id!!] = apacheFtpClient
         } else {
             apacheFtpClient = apacheFtpClientsList[ftpClient.id]!!
@@ -89,7 +90,8 @@ object FTPUtils : ConnectorUtil {
         return withContext(Dispatchers.IO) {
             val bis = BufferedInputStream(FileInputStream(localFile))
             try {
-                createConnection(ftpClient).storeFile(syncData.serverPath + "/" + localFile.name, File(localFile.absolutePath).inputStream())
+                createConnection(ftpClient).changeWorkingDirectory(syncData.serverPath)
+                createConnection(ftpClient).storeFile(localFile.name, File(localFile.absolutePath).inputStream())
             } catch (e: Exception) {
                 LogerFileUtils.error(e.message!! + " => " + localFile.name)
                 return@withContext false
@@ -101,7 +103,8 @@ object FTPUtils : ConnectorUtil {
 
     override suspend fun storeFileOnRemoteSimple(localFileIS: InputStream, ftpClient: FtpClient, location: String, fileName: String): Boolean? {
         return withContext(Dispatchers.IO) {
-            val success = createConnection(ftpClient).storeFile("$location/$fileName", localFileIS)
+            createConnection(ftpClient).changeWorkingDirectory(location)
+            val success = createConnection(ftpClient).storeFile(fileName, localFileIS)
             if (!success) {
                 LogerFileUtils.error("Failed to transfer => $fileName")
             }

@@ -16,7 +16,6 @@ import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.entities.SyncData
 import com.padana.ftpsync.services.utils.*
 import com.padana.ftpsync.simple.services.utils.MediaUtils
-import com.padana.ftpsync.utils.ConnTypes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -113,7 +112,7 @@ class SyncDataSimpleService : Service() {
                 val remoteConnector = RemoteConnector(ftpClient)
                 var rootLocation = ""
                 if (ftpClient.rootLocation.isNullOrEmpty()) {
-                    rootLocation = "/home/" + ftpClient.user + "/FileSync"
+                    rootLocation = "/FileSync"
                 } else {
                     rootLocation = ftpClient.rootLocation!! + "/FileSync"
                 }
