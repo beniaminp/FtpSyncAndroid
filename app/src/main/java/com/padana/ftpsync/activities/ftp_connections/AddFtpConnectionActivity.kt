@@ -50,6 +50,7 @@ class AddFtpConnectionActivity : AppCompatActivity() {
             txtRootFileLocation.isEnabled = false
             spinnerConnectionType.setSelection(adapter.getPosition(ftpClient.connectionType))
             txtHostName.setText(ftpClient.hostName)
+            txtSftpPort.setText(ftpClient.sftpPort)
         }
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)

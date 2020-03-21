@@ -7,11 +7,10 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.RecyclerView
-import com.padana.ftpsync.MyApp
 import com.padana.ftpsync.R
 import com.padana.ftpsync.entities.FileInfo
 import com.padana.ftpsync.entities.FtpClient
-import com.padana.ftpsync.services.utils.SSHJUtils
+import com.padana.ftpsync.services.utils.RemoteConnector
 import com.padana.ftpsync.simple.fragments.GalleryItemFragment.OnListFragmentInteractionListener
 import com.padana.ftpsync.simple.interfaces.RecViewLoadMore
 import com.squareup.picasso.Picasso
@@ -21,8 +20,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import net.jpountz.lz4.LZ4Factory
-import net.schmizz.sshj.xfer.FileSystemFile
 import java.io.File
 
 
@@ -33,6 +30,7 @@ class MyGalleryItemRecyclerViewAdapter(
         private val ftpClient: FtpClient)
     : RecyclerView.Adapter<MyGalleryItemRecyclerViewAdapter.ViewHolder>() {
     private lateinit var dialog: AlertDialog
+    val remoteConnector = RemoteConnector(ftpClient)
 
     private val mOnClickListener: View.OnClickListener
 
@@ -104,25 +102,13 @@ class MyGalleryItemRecyclerViewAdapter(
 
     private suspend fun getRemoteFileThumbanil(fileInfo: FileInfo): File {
         return withContext(Dispatchers.IO) {
-            var file = File("")
-            SSHJUtils.createSFTPConnection(ftpClient)?.let { sftpChan ->
-                val outputFile = File.createTempFile("prefix", ".jpeg", MyApp.getCtx().externalCacheDir)
-                sftpChan.get(fileInfo.thumbnailLocation, FileSystemFile(outputFile))
-                file = outputFile
-            }
-            file
+            remoteConnector.getFile(fileInfo.thumbnailLocation!!)
         }
     }
 
     private suspend fun getRemoteFile(fileInfo: FileInfo): File {
         return withContext(Dispatchers.IO) {
-            var file = File("")
-            SSHJUtils.createSFTPConnection(ftpClient)?.let { sftpChan ->
-                var outputFile = File.createTempFile("prefix", ".jpeg", MyApp.getCtx().externalCacheDir)
-                sftpChan.get(fileInfo.location, FileSystemFile(outputFile))
-                file = outputFile
-            }
-            file
+            remoteConnector.getFile(fileInfo.location!!)
         }
     }
 }

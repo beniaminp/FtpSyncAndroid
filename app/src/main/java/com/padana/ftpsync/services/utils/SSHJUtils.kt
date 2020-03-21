@@ -17,30 +17,32 @@ import java.io.*
 import java.security.Security
 
 
-object SSHJUtils {
-    private var sftpClients: Map<Int, SFTPClient> = HashMap()
-    fun createSFTPConnection(ftpClient: FtpClient): SFTPClient? {
-        var sftpClient: SFTPClient
+object SSHJUtils : ConnectorUtil {
+    private var sftpClients: HashMap<Int, SFTPClient> = HashMap()
+
+    override fun createConnection(ftpClient: FtpClient): SFTPClient {
+        val sftpClient: SFTPClient
         if (sftpClients[ftpClient.id] == null) {
             Security.removeProvider("BC")
             Security.insertProviderAt(BouncyCastleProvider(), Security.getProviders().size + 1)
             val ssh = SSHClient()
-            ssh.useCompression()
+            // ssh.useCompression()
             ssh.addHostKeyVerifier(PromiscuousVerifier())
             ssh.connect(ftpClient.server, if (ftpClient.sftpPort != null) ftpClient.sftpPort!!.toInt() else 22)
             ssh.authPassword(ftpClient.user, ftpClient.password)
             sftpClient = ssh.newSFTPClient()
+            sftpClients.put(ftpClient.id!!, sftpClient)
         } else {
             sftpClient = sftpClients[ftpClient.id]!!
         }
         return sftpClient
     }
 
-    fun makeDirectory(sftp: SFTPClient, dirPath: String): Void {
+    override fun makeDirectory(ftpClient: FtpClient, dirPath: String): Void {
         return object : AsyncTask<Void, Void, Void>() {
             override fun doInBackground(vararg voids: Void): Void? {
                 try {
-                    sftp.mkdir(dirPath)
+                    createConnection(ftpClient).mkdir(dirPath)
                 } catch (e: Exception) {
                     LogerFileUtils.error(e.message!!)
                     e.printStackTrace()
@@ -50,24 +52,24 @@ object SSHJUtils {
         }.execute().get()
     }
 
-    suspend fun listFiles(sftp: SFTPClient, syncData: SyncData): List<RemoteResourceInfo> {
+    override suspend fun listFiles(ftpClient: FtpClient, syncData: SyncData): List<Any> {
         return withContext(Dispatchers.IO) {
-            return@withContext sftp.ls(syncData.serverPath)
+            return@withContext createConnection(ftpClient).ls(syncData.serverPath)
         }
     }
 
-    fun listFilesByPath(sftp: SFTPClient, path: String): List<RemoteResourceInfo> {
+    override fun listFilesByPath(ftpClient: FtpClient, path: String): List<Any> {
         return object : AsyncTask<Void, Void, List<RemoteResourceInfo>>() {
             override fun doInBackground(vararg voids: Void): List<RemoteResourceInfo> {
-                return sftp.ls(path)
+                return createConnection(ftpClient).ls(path)
             }
         }.execute().get()
     }
 
-    suspend fun checkDirectoryExists(sftp: SFTPClient, dirPath: String): Boolean {
+    override suspend fun checkDirectoryExists(ftpClient: FtpClient, dirPath: String): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                if (sftp.stat(dirPath) != null) {
+                if (createConnection(ftpClient).stat(dirPath) != null) {
                     return@withContext true
                 }
                 return@withContext false
@@ -80,9 +82,9 @@ object SSHJUtils {
         }
     }
 
-    suspend fun remoteFileExists(localFile: File, remoteFiles: List<RemoteResourceInfo>): Boolean {
+    override suspend fun remoteFileExists(localFile: File, remoteFiles: List<Any>): Boolean {
         return withContext(Dispatchers.IO) {
-            remoteFiles.forEach { remoteFile ->
+            (remoteFiles as List<RemoteResourceInfo>).forEach { remoteFile ->
                 if (remoteFile.name == localFile.name) {
                     return@withContext true
                 }
@@ -92,11 +94,11 @@ object SSHJUtils {
 
     }
 
-    suspend fun storeFileOnRemote(localFile: File, sftp: SFTPClient, syncData: SyncData): Boolean? {
+    override suspend fun storeFileOnRemote(localFile: File, ftpClient: FtpClient, syncData: SyncData): Boolean? {
         return withContext(Dispatchers.IO) {
             val bis = BufferedInputStream(FileInputStream(localFile))
             try {
-                sftp.put(localFile.absolutePath, syncData.serverPath + "/" + localFile.name)
+                createConnection(ftpClient).put(localFile.absolutePath, syncData.serverPath + "/" + localFile.name)
             } catch (e: SFTPException) {
                 LogerFileUtils.error(e.message!! + " => " + localFile.name)
                 return@withContext false
@@ -106,12 +108,12 @@ object SSHJUtils {
         }
     }
 
-    suspend fun storeFileOnRemoteSimple(localFileIS: InputStream, sftp: SFTPClient, location: String, fileName: String): Boolean? {
+    override suspend fun storeFileOnRemoteSimple(localFileIS: InputStream, ftpClient: FtpClient, location: String, fileName: String): Boolean? {
         return withContext(Dispatchers.IO) {
             try {
                 val file = File.createTempFile("tmp-file", "tmp", MyApp.getCtx().externalCacheDir)
                 copyInputStreamToFile(localFileIS, file)
-                sftp.put(FileSystemFile(file), "$location/$fileName")
+                createConnection(ftpClient).put(FileSystemFile(file), "$location/$fileName")
                 file.delete()
             } catch (e: SFTPException) {
                 LogerFileUtils.error(e.message!! + " => " + fileName)
@@ -121,7 +123,7 @@ object SSHJUtils {
         }
     }
 
-    suspend fun makeDirectories(sftp: SFTPClient, dirPath: String): Boolean {
+    override suspend fun makeDirectories(ftpClient: FtpClient, dirPath: String): Boolean {
         return withContext(Dispatchers.IO) {
             val pathElements = dirPath.split("/").toTypedArray()
             var partialPath = ""
@@ -133,15 +135,23 @@ object SSHJUtils {
                         continue
                     }
                     partialPath += singleDir
-                    val existed: Boolean = checkDirectoryExists(sftp, partialPath)
+                    val existed: Boolean = checkDirectoryExists(ftpClient, partialPath)
                     if (!existed) {
-                        sftp.mkdir(partialPath)
+                        createConnection(ftpClient).mkdir(partialPath)
                     }
                     partialPath += "/"
                 }
             }
             return@withContext true
         }
+    }
+
+    override suspend fun getFile(ftpClient: FtpClient, fileLocation: String): File {
+        val file: File
+        val outputFile = File.createTempFile("prefix", ".jpeg", MyApp.getCtx().externalCacheDir)
+        createConnection(ftpClient).get(fileLocation, FileSystemFile(outputFile))
+        file = outputFile
+        return file
     }
 
     @Throws(IOException::class)

@@ -1,3 +1,4 @@
+/*
 package com.padana.ftpsync.services
 
 import android.app.AlarmManager
@@ -235,9 +236,11 @@ class SyncDataService : Service() {
                     }
                 }
             }
-            /*storeFilesList.forEach { storeFile ->
+            */
+/*storeFilesList.forEach { storeFile ->
             SFTPUtils.storeFileOnRemote(storeFile.localFile, sftp, storeFile.syncData)
-        }*/
+        }*//*
+
             return@withContext storeFilesList
         }
     }
@@ -348,3 +351,4 @@ class SyncDataService : Service() {
         lateinit var syncData: SyncData
     }
 }
+*/

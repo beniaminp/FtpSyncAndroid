@@ -16,6 +16,9 @@ interface GenericDAO {
     @Delete
     fun deleteFtpClient(vararg ftpClient: FtpClient)
 
+    @Query("SELECT * FROM ftp_clients WHERE id=:ftpClientId")
+    fun findOneFtpClient(ftpClientId: Int): FtpClient
+
     @Query("SELECT * FROM ftp_clients")
     fun loadAllFtpClients(): Array<FtpClient>
 
