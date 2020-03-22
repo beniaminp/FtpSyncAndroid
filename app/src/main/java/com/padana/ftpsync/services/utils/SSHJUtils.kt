@@ -58,10 +58,10 @@ object SSHJUtils : ConnectorUtil {
         }
     }
 
-    override fun listFilesByPath(ftpClient: FtpClient, path: String): List<Any> {
-        return object : AsyncTask<Void, Void, List<RemoteResourceInfo>>() {
-            override fun doInBackground(vararg voids: Void): List<RemoteResourceInfo> {
-                return createConnection(ftpClient).ls(path)
+    override fun listFilesByPath(ftpClient: FtpClient, path: String): List<ConnectorFile> {
+        return object : AsyncTask<Void, Void, List<ConnectorFile>>() {
+            override fun doInBackground(vararg voids: Void): List<ConnectorFile> {
+                return createConnection(ftpClient).ls(path).map { remoteResourceInfo -> ConnectorFile(remoteResourceInfo.name) }
             }
         }.execute().get()
     }
@@ -163,4 +163,5 @@ object SSHJUtils : ConnectorUtil {
                     outputStream.write(bytes, 0, read)
                 }
             }
+    
 }

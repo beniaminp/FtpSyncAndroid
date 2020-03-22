@@ -1,32 +1,48 @@
 package com.padana.ftpsync.services.utils
 
 import android.os.AsyncTask
+import android.os.Build
+import com.padana.ftpsync.MyApp
 import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.entities.SyncData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import net.schmizz.sshj.common.IOUtils
 import org.apache.commons.net.ftp.FTP
 import org.apache.commons.net.ftp.FTPClient
 import org.apache.commons.net.ftp.FTPFile
-import java.io.*
+import java.io.BufferedInputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.InputStream
+import java.nio.file.StandardCopyOption
 
 
 object FTPUtils : ConnectorUtil {
     private var apacheFtpClientsList: HashMap<Int, FTPClient> = HashMap()
 
     override fun createConnection(ftpClient: FtpClient): FTPClient {
-        val apacheFtpClient: FTPClient
-        if (apacheFtpClientsList[ftpClient.id] == null) {
-            apacheFtpClient = FTPClient()
-            apacheFtpClient.connect(ftpClient.server, if (ftpClient.sftpPort != null) ftpClient.sftpPort!!.toInt() else 21)
-            apacheFtpClient.login(ftpClient.user, ftpClient.password)
-            apacheFtpClient.setFileType(FTP.BINARY_FILE_TYPE)
-            apacheFtpClient.enterLocalPassiveMode()
-            apacheFtpClient.sendCommand("OPTS UTF8 ON")
-            apacheFtpClientsList[ftpClient.id!!] = apacheFtpClient
-        } else {
-            apacheFtpClient = apacheFtpClientsList[ftpClient.id]!!
-        }
+        val apacheFtpClient = FTPClient()
+        apacheFtpClient.connect(ftpClient.server, if (ftpClient.sftpPort != null) ftpClient.sftpPort!!.toInt() else 21)
+        apacheFtpClient.login(ftpClient.user, ftpClient.password)
+        apacheFtpClient.setFileType(FTP.BINARY_FILE_TYPE)
+        apacheFtpClient.enterLocalPassiveMode()
+        //  apacheFtpClient.sendCommand("OPTS UTF8 ON")
+        // apacheFtpClient.connectTimeout = 5000
+        // apacheFtpClientsList[ftpClient.id!!] = apacheFtpClient
+
+        /* if (apacheFtpClientsList[ftpClient.id] == null) {
+             apacheFtpClient = FTPClient()
+             apacheFtpClient.connect(ftpClient.server, if (ftpClient.sftpPort != null) ftpClient.sftpPort!!.toInt() else 21)
+             apacheFtpClient.login(ftpClient.user, ftpClient.password)
+             apacheFtpClient.setFileType(FTP.BINARY_FILE_TYPE)
+             apacheFtpClient.enterLocalPassiveMode()
+             apacheFtpClient.sendCommand("OPTS UTF8 ON")
+             apacheFtpClient.connectTimeout = 5000
+             apacheFtpClientsList[ftpClient.id!!] = apacheFtpClient
+         } else {
+             apacheFtpClient = apacheFtpClientsList[ftpClient.id]!!
+         }*/
         return apacheFtpClient
     }
 
@@ -36,7 +52,7 @@ object FTPUtils : ConnectorUtil {
                 try {
                     createConnection(ftpClient).makeDirectory(dirPath)
                 } catch (e: Exception) {
-                    LogerFileUtils.error(e.message!!)
+                    LogerFileUtils.error("makeDirectory -> " + e.message!!)
                     e.printStackTrace()
                 }
                 return null
@@ -44,16 +60,17 @@ object FTPUtils : ConnectorUtil {
         }.execute().get()
     }
 
-    override suspend fun listFiles(ftpClient: FtpClient, syncData: SyncData): List<Any>? {
+    override suspend fun listFiles(ftpClient: FtpClient, syncData: SyncData): List<ConnectorFile>? {
         return withContext(Dispatchers.IO) {
-            return@withContext createConnection(ftpClient).listFiles(syncData.serverPath).toList()
+            return@withContext createConnection(ftpClient).listFiles(syncData.serverPath).toList().map { ftpFile -> ConnectorFile(ftpFile.name) }
         }
     }
 
-    override fun listFilesByPath(ftpClient: FtpClient, path: String): List<Any> {
-        return object : AsyncTask<Void, Void, List<Any>>() {
-            override fun doInBackground(vararg voids: Void): List<Any> {
-                return createConnection(ftpClient).listFiles(path).toList()
+    @Synchronized
+    override fun listFilesByPath(ftpClient: FtpClient, path: String): List<ConnectorFile> {
+        return object : AsyncTask<Void, Void, List<ConnectorFile>>() {
+            override fun doInBackground(vararg voids: Void): List<ConnectorFile> {
+                return createConnection(ftpClient).listFiles(path).toList().map { ftpFile -> ConnectorFile(ftpFile.name) }
             }
         }.execute().get()
     }
@@ -61,12 +78,12 @@ object FTPUtils : ConnectorUtil {
     override suspend fun checkDirectoryExists(ftpClient: FtpClient, dirPath: String): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                if (createConnection(ftpClient).stat(dirPath) != null) {
+                if (createConnection(ftpClient).changeWorkingDirectory(dirPath)) {
                     return@withContext true
                 }
                 return@withContext false
             } catch (e: Exception) {
-                LogerFileUtils.error(e.message!!)
+                LogerFileUtils.error("checkDirectoryExists -> " + e.message!!)
                 e.printStackTrace()
 
                 return@withContext false
@@ -93,7 +110,7 @@ object FTPUtils : ConnectorUtil {
                 createConnection(ftpClient).changeWorkingDirectory(syncData.serverPath)
                 createConnection(ftpClient).storeFile(localFile.name, File(localFile.absolutePath).inputStream())
             } catch (e: Exception) {
-                LogerFileUtils.error(e.message!! + " => " + localFile.name)
+                LogerFileUtils.error("storeFileOnRemote -> " + e.message!! + " => " + localFile.name)
                 return@withContext false
             }
             bis.close()
@@ -114,6 +131,8 @@ object FTPUtils : ConnectorUtil {
 
     override suspend fun makeDirectories(ftpClient: FtpClient, dirPath: String): Boolean {
         return withContext(Dispatchers.IO) {
+            createConnection(ftpClient).changeWorkingDirectory("/")
+
             val pathElements = dirPath.split("/").toTypedArray()
             var partialPath = ""
 
@@ -124,30 +143,34 @@ object FTPUtils : ConnectorUtil {
                         continue
                     }
                     partialPath += singleDir
-                    val existed: Boolean = checkDirectoryExists(ftpClient, partialPath)
+                    val existed: Boolean = checkDirectoryExists(ftpClient, singleDir)
                     if (!existed) {
-                        createConnection(ftpClient).makeDirectory(partialPath)
+                        createConnection(ftpClient).makeDirectory(singleDir)
+                        createConnection(ftpClient).changeWorkingDirectory(singleDir)
                     }
                     partialPath += "/"
                 }
             }
+            createConnection(ftpClient).changeWorkingDirectory("/")
             return@withContext true
         }
     }
 
     override suspend fun getFile(ftpClient: FtpClient, fileLocation: String): File {
-        val file = File("")
-        val outputStream2: OutputStream = BufferedOutputStream(FileOutputStream(file))
-        val inputStream: InputStream = createConnection(ftpClient).retrieveFileStream(fileLocation)
-        val bytesArray = ByteArray(4096)
-        var bytesRead = -1
-        while (inputStream.read(bytesArray).also { bytesRead = it } != -1) {
-            outputStream2.write(bytesArray, 0, bytesRead)
+        val file = File.createTempFile("prefix", ".jpg", MyApp.getCtx().externalCacheDir)
+        try {
+            val inputStream: InputStream = createConnection(ftpClient).retrieveFileStream(fileLocation)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                java.nio.file.Files.copy(
+                        inputStream,
+                        file.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING)
+            }
+            IOUtils.closeQuietly(inputStream)
+        } catch (e: Exception) {
+            LogerFileUtils.error("getFile -> " + e.message!!)
+            e.printStackTrace()
         }
-
-        createConnection(ftpClient).completePendingCommand()
-        outputStream2.close()
-        inputStream.close()
         return file
     }
 }

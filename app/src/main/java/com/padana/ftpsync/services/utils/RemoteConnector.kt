@@ -34,7 +34,7 @@ class RemoteConnector(val ftpClient: FtpClient) {
         throw RuntimeException("No Connector Client Defined")
     }
 
-    fun listFilesByPath(path: String): List<Any> {
+    fun listFilesByPath(path: String): List<ConnectorFile> {
         if (ftpClient.connectionType == "SFTP") {
             return SSHJUtils.listFilesByPath(ftpClient, path)
         } else if (ftpClient.connectionType == "FTP") {

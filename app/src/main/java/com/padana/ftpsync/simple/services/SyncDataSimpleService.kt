@@ -154,10 +154,10 @@ class SyncDataSimpleService : Service() {
 
         val remoteFiles = remoteConnector.listFilesByPath(rootLocation)
 
-        val images = MediaUtils.getImages()?.take(10)
+        val images = MediaUtils.getImages()?.take(20)
         return images?.forEach { image ->
             var remoteFileExists = false
-            (remoteFiles as List<RemoteResourceInfo>).forEach { remoteFile ->
+            remoteFiles.forEach { remoteFile ->
                 if (remoteFile.name == image.name) {
                     remoteFileExists = true
                 }
