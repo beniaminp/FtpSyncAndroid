@@ -1,13 +1,13 @@
 package com.padana.ftpsync.services.utils
 
 import android.os.AsyncTask
-import android.os.Build
 import com.padana.ftpsync.MyApp
 import com.padana.ftpsync.entities.FtpClient
 import com.padana.ftpsync.entities.SyncData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.schmizz.sshj.common.IOUtils
+import org.apache.commons.io.FileUtils
 import org.apache.commons.net.ftp.FTP
 import org.apache.commons.net.ftp.FTPClient
 import org.apache.commons.net.ftp.FTPFile
@@ -15,7 +15,6 @@ import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
-import java.nio.file.StandardCopyOption
 
 
 object FTPUtils : ConnectorUtil {
@@ -106,32 +105,38 @@ object FTPUtils : ConnectorUtil {
     override suspend fun storeFileOnRemote(localFile: File, ftpClient: FtpClient, syncData: SyncData): Boolean? {
         return withContext(Dispatchers.IO) {
             val bis = BufferedInputStream(FileInputStream(localFile))
+            val ftpConn = createConnection(ftpClient)
             try {
-                createConnection(ftpClient).changeWorkingDirectory(syncData.serverPath)
-                createConnection(ftpClient).storeFile(localFile.name, File(localFile.absolutePath).inputStream())
+                ftpConn.changeWorkingDirectory(syncData.serverPath)
+                ftpConn.storeFile(localFile.name, File(localFile.absolutePath).inputStream())
             } catch (e: Exception) {
                 LogerFileUtils.error("storeFileOnRemote -> " + e.message!! + " => " + localFile.name)
+                IOUtils.closeQuietly(bis)
                 return@withContext false
             }
             bis.close()
+            IOUtils.closeQuietly(bis)
             return@withContext true
         }
     }
 
     override suspend fun storeFileOnRemoteSimple(localFileIS: InputStream, ftpClient: FtpClient, location: String, fileName: String): Boolean? {
         return withContext(Dispatchers.IO) {
-            createConnection(ftpClient).changeWorkingDirectory(location)
-            val success = createConnection(ftpClient).storeFile(fileName, localFileIS)
+            val ftpConn = createConnection(ftpClient)
+            ftpConn.changeWorkingDirectory(location)
+            val success = ftpConn.storeFile(fileName, localFileIS)
             if (!success) {
                 LogerFileUtils.error("Failed to transfer => $fileName")
             }
+            IOUtils.closeQuietly(localFileIS)
             return@withContext success
         }
     }
 
     override suspend fun makeDirectories(ftpClient: FtpClient, dirPath: String): Boolean {
         return withContext(Dispatchers.IO) {
-            createConnection(ftpClient).changeWorkingDirectory("/")
+            val ftpConn = createConnection(ftpClient)
+            ftpConn.changeWorkingDirectory("/")
 
             val pathElements = dirPath.split("/").toTypedArray()
             var partialPath = ""
@@ -145,13 +150,13 @@ object FTPUtils : ConnectorUtil {
                     partialPath += singleDir
                     val existed: Boolean = checkDirectoryExists(ftpClient, singleDir)
                     if (!existed) {
-                        createConnection(ftpClient).makeDirectory(singleDir)
-                        createConnection(ftpClient).changeWorkingDirectory(singleDir)
+                        ftpConn.makeDirectory(singleDir)
                     }
+                    ftpConn.changeWorkingDirectory(singleDir)
                     partialPath += "/"
                 }
             }
-            createConnection(ftpClient).changeWorkingDirectory("/")
+            ftpConn.changeWorkingDirectory("/")
             return@withContext true
         }
     }
@@ -160,12 +165,7 @@ object FTPUtils : ConnectorUtil {
         val file = File.createTempFile("prefix", ".jpg", MyApp.getCtx().externalCacheDir)
         try {
             val inputStream: InputStream = createConnection(ftpClient).retrieveFileStream(fileLocation)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                java.nio.file.Files.copy(
-                        inputStream,
-                        file.toPath(),
-                        StandardCopyOption.REPLACE_EXISTING)
-            }
+            FileUtils.copyInputStreamToFile(inputStream, file)
             IOUtils.closeQuietly(inputStream)
         } catch (e: Exception) {
             LogerFileUtils.error("getFile -> " + e.message!!)

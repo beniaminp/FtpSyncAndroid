@@ -43,15 +43,25 @@ class MyGalleryItemRecyclerViewAdapter(
                     position = index
                 }
             }
-            val salfcon = StfalconImageViewer.Builder(v.context, mValues) { view, image ->
+            val salfconBuilder = StfalconImageViewer.Builder(v.context, mValues) { view, image ->
                 GlobalScope.launch(Dispatchers.Main) {
                     dialog.show()
-                    val image = getRemoteFile(item)
+                    val image = getRemoteFile(image)
                     dialog.hide()
                     Picasso.get().load(image).into(view)
                 }
             }
-            salfcon.show().setCurrentPosition(position)
+            salfconBuilder.allowZooming(true)
+            val stfalcon: StfalconImageViewer<FileInfo> = salfconBuilder.show(true)
+            stfalcon.setCurrentPosition(position)
+
+/*            salfconBuilder.withImageChangeListener { pos ->
+                println(position)
+                if (pos != position) {
+                    stfalcon.setCurrentPosition(pos)
+                }
+            }*/
+
 
             // mListener?.onListFragmentInteraction(item)
         }

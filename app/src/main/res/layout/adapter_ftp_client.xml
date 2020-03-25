@@ -25,20 +25,39 @@
         android:drawableLeft="@mipmap/edit_client" />
 
     <Button
-        android:id="@+id/btnFtpClientChooseFolders"
+        android:id="@+id/btnFtpClientDelete"
+        android:background="@color/white"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight=".15"
+        android:drawableStart="@mipmap/delete_client"
+        android:drawableLeft="@mipmap/delete_client" />
+
+    <Button
+        android:id="@+id/btnSimpleView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight=".15"
+        android:background="@color/white"
+        android:drawableStart="@mipmap/image_icon"
+        android:drawableLeft="@mipmap/image_icon" />
+    <Button
+        android:id="@+id/btnFtpClientChooseFolders"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0"
         android:drawableStart="@mipmap/add_folder"
-        android:drawableLeft="@mipmap/add_folder" />
+        android:drawableLeft="@mipmap/add_folder"
+        android:visibility="invisible" />
 
     <Button
         android:id="@+id/btnViewSyncData"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight=".15"
+        android:layout_weight="0"
         android:drawableStart="@mipmap/view_list"
-        android:drawableLeft="@mipmap/view_list" />
+        android:drawableLeft="@mipmap/view_list"
+        android:visibility="invisible" />
 
     <Button
         android:id="@+id/btnStartSync"
@@ -57,20 +76,4 @@
         android:drawableStart="@android:drawable/ic_popup_sync"
         android:drawableLeft="@android:drawable/ic_popup_sync"
         android:visibility="invisible" />
-
-    <Button
-        android:id="@+id/btnFtpClientDelete"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight=".15"
-        android:drawableStart="@mipmap/delete_client"
-        android:drawableLeft="@mipmap/delete_client" />
-
-    <Button
-        android:id="@+id/btnSimpleView"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight=".15"
-        android:drawableStart="@mipmap/image_icon"
-        android:drawableLeft="@mipmap/image_icon" />
 </LinearLayout>
