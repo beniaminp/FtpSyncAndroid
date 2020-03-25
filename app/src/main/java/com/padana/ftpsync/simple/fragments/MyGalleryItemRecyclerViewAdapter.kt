@@ -73,7 +73,7 @@ class MyGalleryItemRecyclerViewAdapter(
                 .inflate(R.layout.fragment_galleryitem, parent, false)
         val builder = AlertDialog.Builder(parent.context)
         builder.setCancelable(false); // if you want user to wait for some process to finish,
-        builder.setView(R.layout.layout_loading_dialog);
+        builder.setView(R.layout.layout_loading_dialog)
         dialog = builder.create()
         return ViewHolder(view)
     }

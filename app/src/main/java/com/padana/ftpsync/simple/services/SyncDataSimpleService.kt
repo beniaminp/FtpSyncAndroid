@@ -145,7 +145,7 @@ class SyncDataSimpleService : Service() {
         }
     }
 
-    private suspend fun processFiles(remoteConnector: RemoteConnector, rootLocation: String): Unit? {
+    private suspend fun processFiles(remoteConnector: RemoteConnector, rootLocation: String) {
         val directoryExists = remoteConnector.checkDirectoryExists(rootLocation)
         if (!directoryExists) {
             remoteConnector.makeDirectories(rootLocation)
@@ -164,7 +164,7 @@ class SyncDataSimpleService : Service() {
         val remoteFiles = remoteConnector.listFilesByPath(rootLocation)
 
         val images = MediaUtils.getImages()?.take(50)
-        return images?.forEach { image ->
+        images?.forEach { image ->
             try {
                 var remoteFileExists = false
                 remoteFiles.forEach { remoteFile ->
@@ -181,7 +181,7 @@ class SyncDataSimpleService : Service() {
                     FileUtils.copyInputStreamToFile(contentResolver.openInputStream(image.uri)!!, file)
                     val compressedImageFile = Compressor.compress(MyApp.getCtx(), file)
                     remoteConnector.storeFileOnRemoteSimple(compressedImageFile.inputStream(), rootLocation, image.name)
-                    file.deleteOnExit()
+                    // file.delete()
 
                     val thumbnailOutputStream = ByteArrayOutputStream()
                     MediaUtils.getImageThumbnail(image).compress(Bitmap.CompressFormat.JPEG, 10, thumbnailOutputStream)
@@ -193,9 +193,11 @@ class SyncDataSimpleService : Service() {
                 }
             } catch (e: Exception) {
                 LogerFileUtils.error("processFiles -> " + e.message!!)
+                startForeground(NOTIFICATION_ID, NotifUtils.getNotification("File Sync", "Error sending image ${image.name}..."))
                 e.printStackTrace()
             }
         }
+        startForeground(NOTIFICATION_ID, NotifUtils.getNotification("File Sync", "All files sent...waiting for data..."))
     }
 
     private fun getAllFileInfos(ftpClient: FtpClient) =
