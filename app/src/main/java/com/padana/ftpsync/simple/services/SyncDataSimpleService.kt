@@ -8,7 +8,9 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.os.*
+import android.os.IBinder
+import android.os.Process
+import android.os.SystemClock
 import com.padana.ftpsync.MyApp
 import com.padana.ftpsync.database.DatabaseClient
 import com.padana.ftpsync.entities.FileInfo
@@ -28,7 +30,6 @@ import org.apache.commons.net.ftp.FTPClient
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.nio.file.StandardCopyOption
 
 
 class SyncDataSimpleService : Service() {
@@ -164,30 +165,35 @@ class SyncDataSimpleService : Service() {
 
         val images = MediaUtils.getImages()?.take(50)
         return images?.forEach { image ->
-            var remoteFileExists = false
-            remoteFiles.forEach { remoteFile ->
-                if (remoteFile.name == image.name) {
-                    remoteFileExists = true
+            try {
+                var remoteFileExists = false
+                remoteFiles.forEach { remoteFile ->
+                    if (remoteFile.name == image.name) {
+                        remoteFileExists = true
+                    }
                 }
-            }
-            var fileInfo: FileInfo? = fileInfos.find { fileInfo -> fileInfo.name == image.name }
-            if (!remoteFileExists) {
-                startForeground(NOTIFICATION_ID, NotifUtils.getNotification("File Sync", "Sending image ${image.name}..."))
-                StoreFullFileRunnable(remoteConnector, image, rootLocation, contentResolver).run()
+                var fileInfo: FileInfo? = fileInfos.find { fileInfo -> fileInfo.name == image.name }
+                if (!remoteFileExists) {
+                    startForeground(NOTIFICATION_ID, NotifUtils.getNotification("File Sync", "Sending image ${image.name}..."))
+                    StoreFullFileRunnable(remoteConnector, image, rootLocation, contentResolver).run()
 
-                val file = File.createTempFile("compressed_", "_comp", MyApp.getCtx().cacheDir)
-                FileUtils.copyInputStreamToFile(contentResolver.openInputStream(image.uri)!!, file)
-                val compressedImageFile = Compressor.compress(MyApp.getCtx(), file)
-                remoteConnector.storeFileOnRemoteSimple(compressedImageFile.inputStream(), rootLocation, image.name)
-                file.deleteOnExit()
+                    val file = File.createTempFile("compressed_", "_comp", MyApp.getCtx().cacheDir)
+                    FileUtils.copyInputStreamToFile(contentResolver.openInputStream(image.uri)!!, file)
+                    val compressedImageFile = Compressor.compress(MyApp.getCtx(), file)
+                    remoteConnector.storeFileOnRemoteSimple(compressedImageFile.inputStream(), rootLocation, image.name)
+                    file.deleteOnExit()
 
-                val thumbnailOutputStream = ByteArrayOutputStream()
-                MediaUtils.getImageThumbnail(image).compress(Bitmap.CompressFormat.JPEG, 10, thumbnailOutputStream)
-                remoteConnector.storeFileOnRemoteSimple(ByteArrayInputStream(thumbnailOutputStream.toByteArray()), "$rootLocation/thumbnails/", image.name)
-            }
-            if (fileInfo == null) {
-                fileInfo = FileInfo(null, remoteConnector.ftpClient.id, image.name, image.dateTaken, "$rootLocation/thumbnails/${image.name}", "$rootLocation/${image.name}")
-                DatabaseClient(applicationContext).getAppDatabase().genericDAO.addFileInfo(fileInfo)
+                    val thumbnailOutputStream = ByteArrayOutputStream()
+                    MediaUtils.getImageThumbnail(image).compress(Bitmap.CompressFormat.JPEG, 10, thumbnailOutputStream)
+                    remoteConnector.storeFileOnRemoteSimple(ByteArrayInputStream(thumbnailOutputStream.toByteArray()), "$rootLocation/thumbnails/", image.name)
+                }
+                if (fileInfo == null) {
+                    fileInfo = FileInfo(null, remoteConnector.ftpClient.id, image.name, image.dateTaken, "$rootLocation/thumbnails/${image.name}", "$rootLocation/${image.name}")
+                    DatabaseClient(applicationContext).getAppDatabase().genericDAO.addFileInfo(fileInfo)
+                }
+            } catch (e: Exception) {
+                LogerFileUtils.error("processFiles -> " + e.message!!)
+                e.printStackTrace()
             }
         }
     }
@@ -249,7 +255,12 @@ class SyncDataSimpleService : Service() {
         override fun run() {
             Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
             GlobalScope.launch {
-                remoteConnector.storeFileOnRemoteSimple(contentResolver.openInputStream(image.uri)!!, "$rootLocation/full_files/", image.name)
+                try {
+                    remoteConnector.storeFileOnRemoteSimple(contentResolver.openInputStream(image.uri)!!, "$rootLocation/full_files/", image.name)
+                } catch (e: Exception) {
+                    LogerFileUtils.error("StoreFullFileRunnable.run() -> " + e.message!!)
+                    e.printStackTrace()
+                }
             }
         }
 
